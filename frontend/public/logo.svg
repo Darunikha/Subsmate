@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7cf6"/><stop offset="1" stop-color="#5b4bd6"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M10 19.5a6 6 0 0 0 11.2 2.4M22 12.5a6 6 0 0 0-11.2-2.4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M21.6 8.4v4.4h-4.4M10.4 23.6v-4.4h4.4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8f80f7"/>
+      <stop offset="1" stop-color="#5b49d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#bg)"/>
+  <g transform="rotate(-12 24 25)" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <!-- "OK" ring made by thumb and index finger -->
+    <circle cx="17.5" cy="27.5" r="5.2" stroke-width="3"/>
+    <!-- three raised fingers -->
+    <path d="M22.5 24.5 L24.8 12.5" stroke-width="3.6"/>
+    <path d="M27 25 L30.8 14.5" stroke-width="3.6"/>
+    <path d="M30.5 27 L35.2 19.5" stroke-width="3.6"/>
+    <!-- palm -->
+    <path d="M22 31.5 C25 36 31 37 34 31.5" stroke-width="3.6"/>
+  </g>
+</svg>

@@ -42,7 +42,7 @@ export function Logo() {
     <Link to="/" className="logo" aria-label="Subsmate home">
       <img src="/logo.svg" alt="" width="32" height="32" />
       <span>
-        Subs<em>mate</em>
+        Subs<em>Mate</em>
       </span>
     </Link>
   );

@@ -64,9 +64,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 14px; }
 .sidebar .sidebar-close { display: none; }
-.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: -0.02em; color: var(--text); }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 24px; letter-spacing: -0.04em; color: var(--text); }
 .logo:hover { text-decoration: none; }
-.logo em, .login-logo em { font-style: normal; color: var(--accent); }
+.logo em, .login-logo em { font-style: italic; font-weight: 800; color: var(--accent); padding-right: 2px; }
 .nav { flex: 1; overflow-y: auto; padding: 4px 12px 12px; }
 .nav-group { margin-top: 14px; }
 .nav-section { font-size: 12px; font-weight: 500; color: var(--muted); padding: 0 12px 6px; }
@@ -492,7 +492,7 @@ a.cell-main:hover strong { color: var(--accent-strong); }
   background: linear-gradient(160deg, #241a6b 0%, #3b2fa8 55%, #6d5ce8 100%); color: #fff;
   padding: 44px 56px; display: flex; flex-direction: column; justify-content: space-between;
 }
-.login-logo { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.login-logo { display: flex; align-items: center; gap: 12px; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; }
 .login-logo em { color: #c9c1ff; }
 .login-pitch h1 { font-size: 40px; line-height: 1.15; letter-spacing: -0.03em; max-width: 460px; }
 .login-pitch p { margin-top: 14px; font-size: 16px; color: #d9d4ff; max-width: 440px; }

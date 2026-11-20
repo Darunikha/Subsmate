@@ -40,7 +40,7 @@ export default function Login() {
         <div className="login-logo">
           <img src="/logo.svg" alt="" width="40" height="40" />
           <span>
-            Subs<em>mate</em>
+            Subs<em>Mate</em>
           </span>
         </div>
         <div className="login-pitch">

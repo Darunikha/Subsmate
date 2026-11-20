@@ -230,13 +230,15 @@ def search():
     result = {"subscriptions": [s.summary() for s in subs.order_by(Subscription.id.desc()).limit(5)]}
 
     if user.role == ROLE_CUSTOMER:
+        # Customers have no customers or plans pages, so those results would be dead ends.
         result["customers"] = []
-        plans = SubscriptionPlan.query.filter(SubscriptionPlan.status == "active")
-    else:
-        customers = Customer.query.filter(
-            or_(Customer.full_name.ilike(like), Customer.email.ilike(like), Customer.phone.ilike(like))
-        ).limit(5)
-        result["customers"] = [c.to_dict() for c in customers]
-        plans = SubscriptionPlan.query
-    result["plans"] = [p.to_dict() for p in plans.filter(SubscriptionPlan.name.ilike(like)).limit(5)]
+        result["plans"] = []
+        return jsonify(result)
+
+    customers = Customer.query.filter(
+        or_(Customer.full_name.ilike(like), Customer.email.ilike(like), Customer.phone.ilike(like))
+    ).limit(5)
+    result["customers"] = [c.to_dict() for c in customers]
+    plans = SubscriptionPlan.query.filter(SubscriptionPlan.name.ilike(like)).limit(5)
+    result["plans"] = [p.to_dict() for p in plans]
     return jsonify(result)

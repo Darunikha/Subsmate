@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import { EmptyState, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
@@ -25,7 +25,18 @@ function RequireAuth({ children }) {
 function Allow({ permission, children }) {
   const { can } = useAuth();
   if (can(permission)) return children;
-  return <EmptyState icon="lock" title="Access restricted" message="Your role does not have access to this page." />;
+  return (
+    <EmptyState
+      icon="lock"
+      title="Access restricted"
+      message="Your role does not have access to this page."
+      action={
+        <Link to="/" className="btn btn-primary">
+          Back to dashboard
+        </Link>
+      }
+    />
+  );
 }
 
 export default function App() {

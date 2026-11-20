@@ -99,3 +99,13 @@ def test_admin_cannot_lock_themselves_out(client, auth, users):
     admin_id = users["admin"].id
     assert client.put(f"/api/users/{admin_id}", headers=auth("admin"), json={"is_active": False}).status_code == 400
     assert client.delete(f"/api/users/{admin_id}", headers=auth("admin")).status_code == 400
+
+
+def test_customer_search_only_returns_own_subscriptions(client, auth, two_subscriptions, plans):
+    own, other = two_subscriptions
+    body = client.get("/api/search?q=Basic", headers=auth("customer")).get_json()
+    assert [s["id"] for s in body["subscriptions"]] == [own["id"]]
+    assert body["customers"] == []
+    assert body["plans"] == []  # customers have no plans page, so no dead-end results
+    staff_body = client.get("/api/search?q=Basic", headers=auth("staff")).get_json()
+    assert len(staff_body["plans"]) == 1

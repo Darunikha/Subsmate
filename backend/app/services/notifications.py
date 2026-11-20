@@ -4,10 +4,10 @@ from datetime import timedelta
 from flask import current_app
 
 from ..extensions import db
-from ..models import ROLE_ADMIN, ROLE_BILLING, ROLE_SALES, Notification, Subscription, User
+from ..models import ROLE_ADMIN, ROLE_STAFF, Notification, Subscription, User
 from .dates import today
 
-REMINDER_ROLES = (ROLE_ADMIN, ROLE_SALES, ROLE_BILLING)
+REMINDER_ROLES = (ROLE_ADMIN, ROLE_STAFF)
 EXPIRED_LOOKBACK_DAYS = 30
 
 
@@ -98,7 +98,7 @@ def generate_renewal_reminders():
 def notify_payment_failed(payment):
     sub = payment.subscription
     users = User.query.filter(
-        User.role.in_((ROLE_ADMIN, ROLE_BILLING)), User.is_active.is_(True)
+        User.role.in_((ROLE_ADMIN, ROLE_STAFF)), User.is_active.is_(True)
     ).all()
     _create(
         users,

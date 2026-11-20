@@ -5,22 +5,21 @@ const AuthContext = createContext(null);
 
 export const ROLE_LABELS = {
   admin: 'Administrator',
-  sales: 'Sales Executive',
-  billing: 'Billing Officer',
+  staff: 'Staff',
   customer: 'Customer',
 };
 
 /** Which roles may use each capability. Mirrors the backend permissions. */
 export const PERMISSIONS = {
-  viewCustomers: ['admin', 'sales', 'billing'],
-  manageCustomers: ['admin', 'sales'],
+  viewCustomers: ['admin', 'staff'],
+  manageCustomers: ['admin', 'staff'],
   deleteCustomers: ['admin'],
-  viewPlans: ['admin', 'sales', 'billing'],
+  viewPlans: ['admin', 'staff'],
   managePlans: ['admin'],
-  manageSubscriptions: ['admin', 'sales'],
-  renewSubscriptions: ['admin', 'sales', 'billing'],
-  viewPayments: ['admin', 'billing', 'customer'],
-  managePayments: ['admin', 'billing'],
+  manageSubscriptions: ['admin', 'staff'],
+  renewSubscriptions: ['admin', 'staff'],
+  viewPayments: ['admin', 'staff', 'customer'],
+  managePayments: ['admin', 'staff'],
   viewReports: ['admin'],
   manageUsers: ['admin'],
 };

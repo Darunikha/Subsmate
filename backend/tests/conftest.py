@@ -10,7 +10,7 @@ from app.config import TestConfig  # noqa: E402
 from app.extensions import db  # noqa: E402
 from app.models import Customer, SubscriptionPlan, User  # noqa: E402
 
-PASSWORDS = {"admin": "Admin@1234", "sales": "Sales@1234", "billing": "Billing@1234", "customer": "Customer@1234"}
+PASSWORDS = {"admin": "Admin@1234", "staff": "Staff@1234", "customer": "Customer@1234"}
 
 
 @pytest.fixture()
@@ -30,7 +30,7 @@ def client(app):
 @pytest.fixture()
 def users(app):
     created = {}
-    for role in ("admin", "sales", "billing"):
+    for role in ("admin", "staff"):
         user = User(name=f"{role.title()} User", email=f"{role}@test.io", role=role)
         user.set_password(PASSWORDS[role])
         db.session.add(user)

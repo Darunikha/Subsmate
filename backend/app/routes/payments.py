@@ -6,7 +6,7 @@ from ..extensions import db
 from ..models import (
     PAYMENT_STATUSES,
     ROLE_ADMIN,
-    ROLE_BILLING,
+    ROLE_STAFF,
     ROLE_CUSTOMER,
     Customer,
     Payment,
@@ -24,7 +24,7 @@ def _scoped():
     user = current_user()
     if user.role == ROLE_CUSTOMER:
         query = query.filter(Subscription.customer_id == user.customer_id)
-    elif user.role not in (ROLE_ADMIN, ROLE_BILLING):
+    elif user.role not in (ROLE_ADMIN, ROLE_STAFF):
         raise APIError("You do not have permission to view payments.", 403)
     return query
 
@@ -69,7 +69,7 @@ def list_payments():
 
 
 @bp.post("")
-@roles_required(ROLE_ADMIN, ROLE_BILLING)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def create_payment():
     data = get_json()
     require_fields(data, "subscription_id")
@@ -92,7 +92,7 @@ def get_payment(payment_id):
 
 
 @bp.put("/<int:payment_id>")
-@roles_required(ROLE_ADMIN, ROLE_BILLING)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def edit_payment(payment_id):
     payment = get_or_404(Payment, payment_id, "Payment")
     update_payment(payment, get_json(), current_user())

@@ -4,9 +4,9 @@ import pytest
 
 @pytest.fixture()
 def two_subscriptions(client, auth, customer, other_customer, plans):
-    own = client.post("/api/subscriptions", headers=auth("sales"),
+    own = client.post("/api/subscriptions", headers=auth("staff"),
                       json={"customer_id": customer.id, "plan_id": plans["monthly"].id}).get_json()
-    other = client.post("/api/subscriptions", headers=auth("sales"),
+    other = client.post("/api/subscriptions", headers=auth("staff"),
                         json={"customer_id": other_customer.id, "plan_id": plans["monthly"].id}).get_json()
     return own, other
 
@@ -19,20 +19,23 @@ def two_subscriptions(client, auth, customer, other_customer, plans):
         ("customer", "get", "/api/reports/summary", 403),
         ("customer", "post", "/api/plans", 403),
         ("customer", "post", "/api/payments", 403),
-        ("sales", "get", "/api/users", 403),
-        ("sales", "post", "/api/plans", 403),
-        ("sales", "post", "/api/payments", 403),
-        ("sales", "get", "/api/payments", 403),
-        ("sales", "get", "/api/reports/summary", 403),
-        ("billing", "post", "/api/customers", 403),
-        ("billing", "post", "/api/subscriptions", 403),
-        ("billing", "post", "/api/plans", 403),
-        ("billing", "get", "/api/users", 403),
+        # Staff: day-to-day work (customers, subscriptions, payments) but no admin functions.
+        ("staff", "get", "/api/users", 403),
+        ("staff", "post", "/api/users", 403),
+        ("staff", "post", "/api/plans", 403),
+        ("staff", "put", "/api/plans/1", 403),
+        ("staff", "delete", "/api/customers/1", 403),
+        ("staff", "get", "/api/reports/summary", 403),
+        ("staff", "get", "/api/reports/export/customers", 403),
+        ("staff", "get", "/api/customers", 200),
+        ("staff", "get", "/api/payments", 200),
+        ("staff", "get", "/api/renewals/upcoming", 200),
+        # Allowed for staff: these reach validation (422) instead of being refused (403).
+        ("staff", "post", "/api/customers", 422),
+        ("staff", "post", "/api/subscriptions", 422),
+        ("staff", "post", "/api/payments", 422),
         ("admin", "get", "/api/users", 200),
         ("admin", "get", "/api/reports/summary", 200),
-        ("sales", "get", "/api/customers", 200),
-        ("billing", "get", "/api/payments", 200),
-        ("billing", "get", "/api/renewals/upcoming", 200),
     ],
 )
 def test_role_permissions(client, auth, role, method, url, expected):
@@ -50,7 +53,7 @@ def test_customer_sees_only_own_subscriptions(client, auth, two_subscriptions):
 
 def test_customer_sees_only_own_payments_and_renewals(client, auth, two_subscriptions):
     own, other = two_subscriptions
-    client.post(f"/api/subscriptions/{other['id']}/renew", headers=auth("billing"), json={})
+    client.post(f"/api/subscriptions/{other['id']}/renew", headers=auth("staff"), json={})
     payments = client.get("/api/payments", headers=auth("customer")).get_json()
     assert {p["subscription_id"] for p in payments["items"]} == {own["id"]}
     other_payment = other["payments"][0]["id"]
@@ -82,7 +85,7 @@ def test_customer_only_sees_active_plans(client, auth, plans):
 
 def test_admin_user_management(client, auth):
     created = client.post("/api/users", headers=auth("admin"), json={
-        "name": "New Biller", "email": "biller2@test.io", "password": "Biller@1234", "role": "billing",
+        "name": "New Biller", "email": "biller2@test.io", "password": "Biller@1234", "role": "staff",
     })
     assert created.status_code == 201
     user_id = created.get_json()["id"]

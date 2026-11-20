@@ -42,8 +42,7 @@ On first start, an empty database is filled with realistic demo data, dated rela
 | Role | Email | Password |
 |---|---|---|
 | Administrator | admin@subsmate.io | Admin@123 |
-| Sales Executive | sales@subsmate.io | Sales@123 |
-| Billing Officer | billing@subsmate.io | Billing@123 |
+| Staff | staff@subsmate.io | Staff@123 |
 | Customer | priya.sharma@brightdental.com | Customer@123 |
 
 The login page has one-click buttons that fill in each account.
@@ -66,16 +65,18 @@ The login page has one-click buttons that fill in each account.
 
 ### Role permissions
 
-| Capability | Admin | Sales | Billing | Customer |
-|---|:-:|:-:|:-:|:-:|
-| Manage users | ✓ | | | |
-| Manage plans | ✓ | view | view | |
-| Register and edit customers | ✓ | ✓ | view | |
-| Delete customers | ✓ | | | |
-| Create, edit and cancel subscriptions | ✓ | ✓ | view | own only, read-only |
-| Renew subscriptions | ✓ | ✓ | ✓ | |
-| Record and update payments | ✓ | | ✓ | own history, read-only |
-| Reports and CSV export | ✓ | | | |
+| Capability | Admin | Staff | Customer |
+|---|:-:|:-:|:-:|
+| Manage users | ✓ | | |
+| Manage plans | ✓ | view | |
+| Register and edit customers | ✓ | ✓ | |
+| Delete customers | ✓ | | |
+| Create, edit and cancel subscriptions | ✓ | ✓ | own only, read-only |
+| Renew subscriptions | ✓ | ✓ | |
+| Record and update payments | ✓ | ✓ | own history, read-only |
+| Reports and CSV export | ✓ | | |
+
+Staff is a single day-to-day operations role covering what the brief describes as Sales Executive and Billing Officer. To separate selling from payment handling again, split `ROLE_STAFF` in `backend/app/models.py` and adjust the `roles_required` decorators.
 
 These permissions are enforced by the API, not only hidden in the UI. Customers can only ever query their own records.
 
@@ -108,7 +109,7 @@ backend/
                        payments, renewals, insights (dashboard/reports/search)
     metrics.py         Prometheus /metrics
     seed.py            demo data
-  tests/               pytest suite (84 tests)
+  tests/               pytest suite (85 tests)
 frontend/
   src/lib/             api client, auth context, hooks, formatters
   src/components/      layout, UI kit, forms, charts
@@ -182,5 +183,6 @@ The suite covers authentication, password hashing, token invalidation, customer 
 - SQLite suits a single instance. To scale out, point `DATABASE_URL` at PostgreSQL; the models are portable, but the report queries use SQLite's `strftime` and would need adjusting.
 - The schema is created with `db.create_all()`. Add Flask-Migrate (Alembic) before evolving the schema in production.
 - Payment gateways and email/SMS reminders are deliberately left out. Reminders appear in the app.
-#   S u b s m a t e  
+#   S u b s m a t e 
+ 
  

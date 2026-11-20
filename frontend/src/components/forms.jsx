@@ -20,7 +20,7 @@ function PaymentFields({ form, prefix = 'payment_', showStatusHint }) {
   const { values, set } = form;
   return (
     <>
-      <Field label="Payment status" hint={showStatusHint ? 'Billing can update this later.' : undefined}>
+      <Field label="Payment status" hint={showStatusHint ? 'You can update this later on the Payments page.' : undefined}>
         <select value={values[`${prefix}status`]} onChange={set(`${prefix}status`)}>
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>

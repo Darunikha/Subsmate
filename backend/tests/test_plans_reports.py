@@ -29,7 +29,7 @@ def test_plan_validation_and_duplicates(client, auth):
 
 
 def test_plan_with_subscriptions_cannot_be_deleted(client, auth, customer, plans):
-    client.post("/api/subscriptions", headers=auth("sales"),
+    client.post("/api/subscriptions", headers=auth("staff"),
                 json={"customer_id": customer.id, "plan_id": plans["monthly"].id})
     assert client.delete(f"/api/plans/{plans['monthly'].id}", headers=auth("admin")).status_code == 409
     response = client.put(f"/api/plans/{plans['monthly'].id}", headers=auth("admin"), json={"billing_cycle": "yearly"})
@@ -37,7 +37,7 @@ def test_plan_with_subscriptions_cannot_be_deleted(client, auth, customer, plans
 
 
 def test_report_summary_and_csv_export(client, auth, customer, plans):
-    client.post("/api/subscriptions", headers=auth("sales"),
+    client.post("/api/subscriptions", headers=auth("staff"),
                 json={"customer_id": customer.id, "plan_id": plans["monthly"].id, "payment": {"status": "paid"}})
     summary = client.get("/api/reports/summary", headers=auth("admin")).get_json()
     assert summary["totals"]["active_subscriptions"] == 1

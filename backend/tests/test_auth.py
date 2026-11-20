@@ -35,26 +35,26 @@ def test_protected_route_requires_token(client):
 
 
 def test_me_returns_current_user(client, auth):
-    response = client.get("/api/auth/me", headers=auth("sales"))
+    response = client.get("/api/auth/me", headers=auth("staff"))
     assert response.status_code == 200
-    assert response.get_json()["email"] == "sales@test.io"
+    assert response.get_json()["email"] == "staff@test.io"
 
 
 def test_deactivated_user_cannot_login_or_use_token(client, auth, users):
-    headers = auth("sales")
-    users["sales"].is_active = False
+    headers = auth("staff")
+    users["staff"].is_active = False
     db.session.commit()
     assert client.get("/api/auth/me", headers=headers).status_code == 401
-    response = client.post("/api/auth/login", json={"email": "sales@test.io", "password": "Sales@1234"})
+    response = client.post("/api/auth/login", json={"email": "staff@test.io", "password": "Staff@1234"})
     assert response.status_code == 403
 
 
 def test_change_password_invalidates_old_token(client, auth):
-    headers = auth("billing")
+    headers = auth("staff")
     response = client.post(
         "/api/auth/change-password",
         headers=headers,
-        json={"current_password": "Billing@1234", "new_password": "NewPass@5678"},
+        json={"current_password": "Staff@1234", "new_password": "NewPass@5678"},
     )
     assert response.status_code == 200
     assert client.get("/api/auth/me", headers=headers).status_code == 401
@@ -65,7 +65,7 @@ def test_change_password_invalidates_old_token(client, auth):
 def test_change_password_rejects_wrong_current(client, auth):
     response = client.post(
         "/api/auth/change-password",
-        headers=auth("billing"),
+        headers=auth("staff"),
         json={"current_password": "wrong", "new_password": "NewPass@5678"},
     )
     assert response.status_code == 422

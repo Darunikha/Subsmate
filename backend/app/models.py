@@ -15,10 +15,9 @@ from .services.dates import today
 
 ROLE_ADMIN = "admin"
 ROLE_CUSTOMER = "customer"
-ROLE_SALES = "sales"
-ROLE_BILLING = "billing"
-ROLES = (ROLE_ADMIN, ROLE_CUSTOMER, ROLE_SALES, ROLE_BILLING)
-STAFF_ROLES = (ROLE_ADMIN, ROLE_SALES, ROLE_BILLING)
+ROLE_STAFF = "staff"
+ROLES = (ROLE_ADMIN, ROLE_CUSTOMER, ROLE_STAFF)
+STAFF_ROLES = (ROLE_ADMIN, ROLE_STAFF)
 
 BILLING_CYCLES = {"monthly": 1, "quarterly": 3, "yearly": 12}
 ACTIVE_INACTIVE = ("active", "inactive")

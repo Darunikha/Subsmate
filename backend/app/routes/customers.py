@@ -7,7 +7,7 @@ from ..models import (
     ACTIVE_INACTIVE,
     ROLE_ADMIN,
     ROLE_CUSTOMER,
-    ROLE_SALES,
+    ROLE_STAFF,
     STAFF_ROLES,
     Customer,
     Payment,
@@ -64,7 +64,7 @@ def list_customers():
 
 
 @bp.post("")
-@roles_required(ROLE_ADMIN, ROLE_SALES)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def create_customer():
     data = get_json()
     require_fields(data, "full_name", "email")
@@ -112,7 +112,7 @@ def get_customer(customer_id):
 
 
 @bp.put("/<int:customer_id>")
-@roles_required(ROLE_ADMIN, ROLE_SALES)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def update_customer(customer_id):
     customer = get_or_404(Customer, customer_id, "Customer")
     data = get_json()

@@ -105,7 +105,7 @@ function UserForm({ editUser, onClose, onSaved }) {
   const form = useForm({
     name: editUser?.name || '',
     email: editUser?.email || '',
-    role: editUser?.role || 'sales',
+    role: editUser?.role || 'staff',
     password: '',
     is_active: editUser ? editUser.is_active : true,
   });

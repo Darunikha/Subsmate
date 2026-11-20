@@ -15,8 +15,7 @@ from .services.dates import calculate_expiry, today
 
 DEMO_USERS = [
     ("Ava Mitchell", "admin@subsmate.io", "Admin@123", "admin"),
-    ("Daniel Reyes", "sales@subsmate.io", "Sales@123", "sales"),
-    ("Grace Okafor", "billing@subsmate.io", "Billing@123", "billing"),
+    ("Daniel Reyes", "staff@subsmate.io", "Staff@123", "staff"),
 ]
 DEMO_CUSTOMER_LOGIN = ("priya.sharma@brightdental.com", "Customer@123")
 
@@ -83,7 +82,7 @@ def seed_if_empty():
         user.set_password(password)
         db.session.add(user)
         staff.append(user)
-    admin, sales, billing = staff
+    admin, staff_user = staff
 
     plans = []
     for name, description, price, cycle, features in PLANS:
@@ -110,7 +109,7 @@ def seed_if_empty():
         customers.append(customer)
     db.session.flush()
     for customer in customers:
-        customer.created_by_id = sales.id
+        customer.created_by_id = staff_user.id
 
     login_email, login_password = DEMO_CUSTOMER_LOGIN
     portal_customer = next(c for c in customers if c.email == login_email)
@@ -131,17 +130,17 @@ def seed_if_empty():
             if index < 3:  # make sure the demo customer has a near-term renewal
                 offset = rng.randint(20, earliest + 20)
             start = max(customer.registration_date, current_day - timedelta(days=offset))
-            _build_history(rng, customer, plan, start, current_day, sales, billing, index)
+            _build_history(rng, customer, plan, start, current_day, staff_user, index)
 
     db.session.commit()
     return True
 
 
-def _build_history(rng, customer, plan, start, current_day, sales, billing, index):
+def _build_history(rng, customer, plan, start, current_day, staff_user, index):
     sub = Subscription(
         customer=customer, plan=plan, start_date=start,
         expiry_date=calculate_expiry(start, plan.billing_cycle), amount=plan.price,
-        status="active", payment_status="paid", created_by_id=sales.id,
+        status="active", payment_status="paid", created_by_id=staff_user.id,
         created_at=_dt(start, 9),
     )
     db.session.add(sub)
@@ -152,7 +151,7 @@ def _build_history(rng, customer, plan, start, current_day, sales, billing, inde
             subscription=sub, amount=sub.amount, status=status, method=rng.choice(METHODS),
             due_date=period_start, paid_on=paid_on if status == "paid" else None,
             reference=f"TX-{rng.randint(100000, 999999)}" if status == "paid" else None,
-            recorded_by_id=billing.id, created_at=_dt(period_start, 11),
+            recorded_by_id=staff_user.id, created_at=_dt(period_start, 11),
             updated_at=_dt(paid_on if status == "paid" else period_start, 12),
         )
         db.session.add(payment)
@@ -178,7 +177,7 @@ def _build_history(rng, customer, plan, start, current_day, sales, billing, inde
         db.session.add(RenewalHistory(
             subscription=sub, plan=plan, payment=payment, previous_expiry_date=previous,
             period_start=previous, new_expiry_date=new_expiry, amount=sub.amount,
-            renewed_by_id=billing.id, renewed_at=_dt(renewed_on, 14),
+            renewed_by_id=staff_user.id, renewed_at=_dt(renewed_on, 14),
         ))
         sub.expiry_date = new_expiry
         sub.last_renewed_at = _dt(renewed_on, 14)

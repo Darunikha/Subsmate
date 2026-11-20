@@ -6,8 +6,7 @@ import Icon from '../components/Icon';
 
 const DEMO_ACCOUNTS = [
   { role: 'Administrator', email: 'admin@subsmate.io', password: 'Admin@123' },
-  { role: 'Sales Executive', email: 'sales@subsmate.io', password: 'Sales@123' },
-  { role: 'Billing Officer', email: 'billing@subsmate.io', password: 'Billing@123' },
+  { role: 'Staff', email: 'staff@subsmate.io', password: 'Staff@123' },
   { role: 'Customer', email: 'priya.sharma@brightdental.com', password: 'Customer@123' },
 ];
 

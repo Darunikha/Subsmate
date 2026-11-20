@@ -5,9 +5,8 @@ from ..auth import current_user, login_required, roles_required
 from ..extensions import db
 from ..models import (
     ROLE_ADMIN,
-    ROLE_BILLING,
     ROLE_CUSTOMER,
-    ROLE_SALES,
+    ROLE_STAFF,
     Customer,
     Subscription,
     SubscriptionPlan,
@@ -68,7 +67,7 @@ def list_subscriptions():
 
 
 @bp.post("")
-@roles_required(ROLE_ADMIN, ROLE_SALES)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def create_subscription():
     data = get_json()
     require_fields(data, "customer_id", "plan_id")
@@ -86,7 +85,7 @@ def get_subscription(subscription_id):
 
 
 @bp.put("/<int:subscription_id>")
-@roles_required(ROLE_ADMIN, ROLE_SALES)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def update_subscription(subscription_id):
     sub = get_or_404(Subscription, subscription_id, "Subscription")
     service.update_subscription(sub, get_json())
@@ -95,7 +94,7 @@ def update_subscription(subscription_id):
 
 
 @bp.post("/<int:subscription_id>/cancel")
-@roles_required(ROLE_ADMIN, ROLE_SALES)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def cancel_subscription(subscription_id):
     sub = get_or_404(Subscription, subscription_id, "Subscription")
     data = request.get_json(silent=True) or {}
@@ -105,7 +104,7 @@ def cancel_subscription(subscription_id):
 
 
 @bp.post("/<int:subscription_id>/renew")
-@roles_required(ROLE_ADMIN, ROLE_SALES, ROLE_BILLING)
+@roles_required(ROLE_ADMIN, ROLE_STAFF)
 def renew_subscription(subscription_id):
     sub = get_or_404(Subscription, subscription_id, "Subscription")
     data = request.get_json(silent=True) or {}

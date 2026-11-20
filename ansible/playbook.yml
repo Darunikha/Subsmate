@@ -1,0 +1,88 @@
+# Configures an Ubuntu host to run Subsmate with Docker Compose.
+#   ansible-playbook -i inventory.ini playbook.yml -e subsmate_secret_key=<random> [-e enable_monitoring=true]
+- name: Deploy Subsmate
+  hosts: subsmate
+  become: true
+  vars:
+    app_dir: /opt/subsmate
+    repo_root: "{{ playbook_dir }}/.."
+    enable_monitoring: false
+    seed_demo_data: true
+    subsmate_secret_key: "{{ lookup('env', 'SUBSMATE_SECRET_KEY') }}"
+
+  pre_tasks:
+    - name: Require a secret key
+      ansible.builtin.assert:
+        that: subsmate_secret_key | length >= 16
+        fail_msg: Pass -e subsmate_secret_key=... (at least 16 characters) or set SUBSMATE_SECRET_KEY.
+
+  tasks:
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, rsync]
+        state: present
+        update_cache: true
+
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        filename: docker
+
+    - name: Install Docker Engine and Compose plugin
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Copy application source
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/"
+        dest: "{{ app_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=node_modules"
+          - "--exclude=.venv"
+          - "--exclude=instance"
+          - "--exclude=dist"
+          - "--exclude=terraform/.terraform"
+
+    - name: Write environment file
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+        content: |
+          SECRET_KEY={{ subsmate_secret_key }}
+          SEED_DEMO_DATA={{ seed_demo_data | string | lower }}
+          CORS_ORIGINS=http://{{ ansible_host }}:8080
+
+    - name: Build and start containers
+      ansible.builtin.command:
+        cmd: >-
+          docker compose {{ '--profile monitoring' if enable_monitoring else '' }} up -d --build
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Wait for the API to become healthy
+      ansible.builtin.uri:
+        url: http://localhost:8080/api/health
+        status_code: 200
+      register: health
+      retries: 20
+      delay: 3
+      until: health.status == 200

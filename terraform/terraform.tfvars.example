@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and adjust. terraform.tfvars is git-ignored.
+secret_key     = "replace-with-a-long-random-string"
+seed_demo_data = true
+http_port      = 8080
+# Windows Docker Desktop:
+# docker_host  = "npipe:////./pipe/docker_engine"
+# Remote server prepared by Ansible:
+# docker_host  = "ssh://deploy@203.0.113.10"

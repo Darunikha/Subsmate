@@ -1,0 +1,58 @@
+{
+  "uid": "subsmate-overview",
+  "title": "Subsmate Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "tags": ["subsmate"],
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Active subscriptions",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(subsmate_subscriptions{status=~\"active|expiring_soon\"})" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Expired subscriptions",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } } },
+      "targets": [{ "refId": "A", "expr": "subsmate_subscriptions{status=\"expired\"}" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Pending payment amount",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [{ "refId": "A", "expr": "subsmate_pending_payment_amount" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Revenue this month",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [{ "refId": "A", "expr": "subsmate_revenue_current_month" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "API requests per second",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [{ "refId": "A", "expr": "sum by (status) (rate(subsmate_http_requests_total[5m]))", "legendFormat": "{{status}}" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "API latency p95",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{ "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(subsmate_http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Subscriptions by status",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "subsmate_subscriptions", "legendFormat": "{{status}}" }]
+    }
+  ]
+}

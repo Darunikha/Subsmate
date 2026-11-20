@@ -1,0 +1,151 @@
+# Subsmate on Kubernetes.
+#   1. Build and push images (or load them into kind/minikube):
+#        docker compose build && kind load docker-image subsmate-backend:latest subsmate-frontend:latest
+#   2. Create the namespace and secret:
+#        kubectl create namespace subsmate
+#        kubectl -n subsmate create secret generic subsmate-secrets --from-literal=SECRET_KEY=$(openssl rand -hex 32)
+#   3. kubectl apply -f k8s/
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: subsmate
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: subsmate-config
+  namespace: subsmate
+data:
+  DATABASE_URL: sqlite:////data/subsmate.db
+  SEED_DEMO_DATA: "true"
+  EXPIRING_SOON_DAYS: "7"
+  RENEWAL_WINDOW_DAYS: "30"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: subsmate-data
+  namespace: subsmate
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: subsmate
+  labels: { app: subsmate, tier: backend }
+spec:
+  replicas: 1                 # SQLite: a single writer. Move to Postgres before scaling out.
+  strategy:
+    type: Recreate            # never two pods on the same SQLite file
+  selector:
+    matchLabels: { app: subsmate, tier: backend }
+  template:
+    metadata:
+      labels: { app: subsmate, tier: backend }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: /metrics
+    spec:
+      securityContext:
+        runAsUser: 10001
+        runAsNonRoot: true
+        fsGroup: 10001
+      containers:
+        - name: backend
+          image: subsmate-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef: { name: subsmate-config }
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: subsmate-secrets, key: SECRET_KEY }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /api/health, port: 5000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: 5000 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: subsmate-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend               # nginx in the frontend proxies /api to http://backend:5000
+  namespace: subsmate
+spec:
+  selector: { app: subsmate, tier: backend }
+  ports:
+    - port: 5000
+      targetPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: subsmate
+  labels: { app: subsmate, tier: frontend }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: subsmate, tier: frontend }
+  template:
+    metadata:
+      labels: { app: subsmate, tier: frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: subsmate-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: subsmate
+spec:
+  selector: { app: subsmate, tier: frontend }
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: subsmate
+  namespace: subsmate
+spec:
+  rules:
+    - host: subsmate.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port: { number: 80 }

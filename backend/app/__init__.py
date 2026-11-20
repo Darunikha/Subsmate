@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, abort, jsonify, send_from_directory
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import HTTPException
@@ -33,6 +33,8 @@ def create_app(config_object=None):
         db.session.execute(db.text("SELECT 1"))
         return jsonify({"status": "ok"})
 
+    _register_frontend(app)
+
     with app.app_context():
         db.create_all()
         if app.config.get("SEED_DEMO_DATA"):
@@ -48,6 +50,24 @@ def create_app(config_object=None):
         print("Seeded demo data." if seed_if_empty() else "Database already has data; skipped.")
 
     return app
+
+
+def _register_frontend(app):
+    """Serve the built React app so the whole product can run as one service."""
+    dist = app.config.get("FRONTEND_DIST")
+    if not dist or not os.path.isdir(dist):
+        return
+    dist = os.path.abspath(dist)
+
+    @app.get("/", defaults={"path": ""})
+    @app.get("/<path:path>")
+    def frontend(path):
+        if path.startswith("api/") or path == "api":
+            abort(404)
+        if path and os.path.isfile(os.path.join(dist, path)):
+            return send_from_directory(dist, path)
+        # Client-side routes (/customers, /subscriptions/3 ...) fall back to the app shell.
+        return send_from_directory(dist, "index.html")
 
 
 def _ensure_sqlite_dir(uri):

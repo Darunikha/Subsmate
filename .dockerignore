@@ -1,0 +1,12 @@
+.git
+.github
+**/.venv
+**/node_modules
+**/dist
+**/__pycache__
+**/instance
+**/.pytest_cache
+terraform
+ansible
+k8s
+monitoring

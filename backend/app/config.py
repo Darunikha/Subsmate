@@ -33,6 +33,8 @@ class Config:
     PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "scrypt")
 
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+    # Folder with the built React app. When set, Flask serves the UI too (single-service hosting).
+    FRONTEND_DIST = os.environ.get("FRONTEND_DIST", "")
     SEED_DEMO_DATA = _bool("SEED_DEMO_DATA", True)
     JSON_SORT_KEYS = False
 

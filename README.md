@@ -92,6 +92,21 @@ These permissions are enforced by the API, not only hidden in the UI. Customers 
 
 ---
 
+## Deploy to Render (one service)
+
+The root `Dockerfile` builds the React app and serves it together with the API from a single process, so only one service is needed. There is no CORS or API-URL setup.
+
+1. Push this repo to GitHub.
+2. In Render choose **New + → Blueprint**, select the repo and click **Apply**. `render.yaml` creates the service and a random `SECRET_KEY`.
+3. When the build finishes, open the `.onrender.com` address and sign in with a demo account.
+
+You can try the same image locally with `docker build -t subsmate . && docker run -p 5000:5000 -e SECRET_KEY=change-me subsmate`, then open http://localhost:5000.
+
+**Limits of the free setup:**
+- The free tier's disk is wiped on every restart or redeploy, so data resets to the demo data. That is fine for a demo. For real data, add a persistent disk mounted at `/data` (paid plan) or move to PostgreSQL.
+- The free service sleeps when idle, so the first request after a pause can take 30–60 seconds.
+- Demo accounts are public. For real use, set `SEED_DEMO_DATA=false` and create real users in Settings.
+
 ## Project structure
 
 ```

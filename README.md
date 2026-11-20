@@ -4,6 +4,8 @@ Subsmate helps service businesses manage customer subscriptions, track renewal d
 
 **Stack:** React 18 + Recharts (Vite) · Flask 3 + Flask-SQLAlchemy · SQLite · Pytest · Docker Compose · GitHub Actions · Terraform · Ansible · Kubernetes · Prometheus + Grafana
 
+**[Live Demo](https://subsmate.onrender.com)** – Try it now with demo accounts (see below).
+
 ---
 
 ## Quick start

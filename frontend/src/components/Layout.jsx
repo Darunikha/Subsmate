@@ -36,10 +36,10 @@ const NAV = [
   },
 ];
 
-export function Logo() {
+export function Logo({ light = false }) {
   return (
     <Link to="/" className="logo" aria-label="Subsmate home">
-      <img src="/logo.svg" alt="" width="32" height="32" />
+      <img src={light ? '/logo-light.svg' : '/logo.svg'} alt="" width="32" height="32" />
       <span>
         Subs<em>Mate</em>
       </span>
@@ -54,7 +54,7 @@ function Sidebar({ open, onClose, renewalCount }) {
     <>
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
         <div className="sidebar-top">
-          <Logo />
+          <Logo light />
           <button type="button" className="icon-btn sidebar-close" onClick={onClose} aria-label="Close menu">
             <Icon name="x" />
           </button>

@@ -40,7 +40,7 @@ export default function Login() {
     <div className="login">
       <section className="login-brand">
         <div className="login-logo">
-          <img src="/logo.svg" alt="" width="40" height="40" />
+          <img src="/logo-light.svg" alt="" width="40" height="40" />
           <span>
             Subs<em>Mate</em>
           </span>

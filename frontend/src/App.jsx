@@ -14,10 +14,14 @@ import SubscriptionDetail from './pages/SubscriptionDetail';
 import Subscriptions from './pages/Subscriptions';
 
 function RequireAuth({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, signedOutByUser } = useAuth();
   const location = useLocation();
   if (loading) return <Spinner label="Loading Subsmate…" />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  if (!user) {
+    // After a deliberate logout the next sign-in starts at the dashboard, not the page the last person was on.
+    const from = signedOutByUser ? '/' : location.pathname + location.search;
+    return <Navigate to="/login" replace state={{ from }} />;
+  }
   return children;
 }
 

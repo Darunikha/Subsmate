@@ -92,14 +92,14 @@ export default function Login() {
                   key={account.email}
                   type="button"
                   className="demo-account"
+                  title={account.email}
                   onClick={() => {
                     setEmail(account.email);
                     setPassword(account.password);
                     setError('');
                   }}
                 >
-                  <strong>{account.role}</strong>
-                  <small>{account.email}</small>
+                  {account.role}
                 </button>
               ))}
             </div>

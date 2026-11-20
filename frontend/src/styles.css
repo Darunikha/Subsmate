@@ -1,14 +1,13 @@
 /* Subsmate — minimal SaaS styling. Tokens first, then layout, components, pages. */
 :root {
-  /* Brand colours: Midnight Blue (text, sidebar, buttons) and Buttermilk (highlights) on a white page.
-     Every other shade below is a mix of these. */
-  --buttermilk: #FFF2BA;
+  /* Two colours: Midnight Blue (text, sidebar, buttons) on white.
+     Every other shade below is a tint of Midnight Blue. */
   --midnight: #0F3C65;
   --white: #ffffff;
 
   --bg: var(--white);
   --surface: var(--white);
-  --surface-2: color-mix(in srgb, var(--buttermilk) 38%, var(--white));
+  --surface-2: color-mix(in srgb, var(--midnight) 4%, var(--white));
   --border: color-mix(in srgb, var(--midnight) 14%, var(--white));
   --border-strong: color-mix(in srgb, var(--midnight) 30%, var(--white));
   --text: var(--midnight);
@@ -16,20 +15,21 @@
   --muted: color-mix(in srgb, var(--midnight) 64%, var(--white));
   --accent: var(--midnight);
   --accent-strong: var(--midnight);
-  --accent-soft: var(--buttermilk);
+  --tint: color-mix(in srgb, var(--midnight) 9%, var(--white));
+  --accent-soft: var(--tint);
   --accent-ring: color-mix(in srgb, var(--midnight) 28%, transparent);
-  /* Status is shown by weight: solid = urgent, outline = attention, Buttermilk tint = fine, faint = inactive. */
+  /* Status is shown by weight: solid = urgent, outline = attention, light tint = fine, faint = inactive. */
   --green: var(--midnight);
-  --green-soft: var(--buttermilk);
+  --green-soft: var(--tint);
   --green-mark: var(--midnight);
   --orange: var(--midnight);
-  --orange-soft: var(--buttermilk);
+  --orange-soft: color-mix(in srgb, var(--midnight) 13%, var(--white));
   --orange-mark: color-mix(in srgb, var(--midnight) 58%, var(--white));
   --red: var(--midnight);
   --red-soft: color-mix(in srgb, var(--midnight) 14%, var(--white));
   --red-mark: var(--midnight);
   --blue: var(--midnight);
-  --blue-soft: var(--buttermilk);
+  --blue-soft: var(--tint);
   --gray-soft: color-mix(in srgb, var(--midnight) 7%, var(--white));
   --radius: 14px;
   --radius-sm: 9px;
@@ -525,7 +525,7 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .tone-red { background: var(--midnight); color: var(--white); }
 .empty-icon-red { background: var(--midnight); color: var(--white); }
 .dot-count { background: var(--midnight); color: var(--white); border-color: var(--white); }
-.btn-danger:hover, .btn-primary:hover { background: color-mix(in srgb, var(--midnight) 86%, var(--buttermilk)); border-color: transparent; }
+.btn-danger:hover, .btn-primary:hover { background: color-mix(in srgb, var(--midnight) 86%, var(--white)); border-color: transparent; }
 .renewal-active .renewal-rail { background: color-mix(in srgb, var(--midnight) 26%, var(--white)); }
 .renewal-expiring_soon .renewal-rail { background: color-mix(in srgb, var(--midnight) 60%, var(--white)); }
 .renewal-expired .renewal-rail { background: var(--midnight); width: 5px; }
@@ -552,15 +552,15 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .sidebar-user span { color: color-mix(in srgb, var(--white) 66%, var(--midnight)); }
 .sidebar .avatar { background: var(--white); color: var(--midnight); }
 
-/* ------------------------------------------------------------------ Buttermilk highlights on a white page */
+/* ------------------------------------------------------------------ light highlights on a white page */
 .tabs, .segmented { background: var(--surface-2); }
-.tab-active, .segment-active { background: var(--buttermilk); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--midnight) 18%, var(--buttermilk)); }
+.tab-active, .segment-active { background: var(--white); box-shadow: inset 0 0 0 1.5px var(--midnight); }
 .table th { background: var(--surface-2); }
 .card { box-shadow: 0 1px 2px rgba(15, 60, 101, 0.05); }
-.icon-btn:hover { background: var(--buttermilk); }
-.btn:hover { background: var(--buttermilk); border-color: var(--midnight); }
+.icon-btn:hover { background: var(--tint); }
+.btn:hover { background: var(--tint); border-color: var(--midnight); }
 .btn-primary:hover { background: color-mix(in srgb, var(--midnight) 86%, var(--white)); border-color: transparent; }
-.demo-account:hover { background: var(--buttermilk); }
+.demo-account:hover { background: var(--tint); }
 
 /* ------------------------------------------------------------------ responsive */
 @media (max-width: 1180px) {

@@ -182,3 +182,5 @@ The suite covers authentication, password hashing, token invalidation, customer 
 - SQLite suits a single instance. To scale out, point `DATABASE_URL` at PostgreSQL; the models are portable, but the report queries use SQLite's `strftime` and would need adjusting.
 - The schema is created with `db.create_all()`. Add Flask-Migrate (Alembic) before evolving the schema in production.
 - Payment gateways and email/SMS reminders are deliberately left out. Reminders appear in the app.
+#   S u b s m a t e  
+ 

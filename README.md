@@ -55,11 +55,10 @@ The login page has one-click buttons that fill in each account.
 |---|---|
 | **Dashboard** | Monthly revenue (vs. the same period last month), active subscriptions, upcoming renewals, customer count, 6-month revenue chart, status overview, upcoming renewals and recent activity. Customers see a personal version. All figures come from the database. |
 | **Customers** | Register, edit, search (name, email or phone), set active/inactive, optional portal login, and full subscription and payment history. Customers that have history can't be deleted; they're deactivated instead. |
-| **Subscription plans** | Name, description, price, billing cycle (monthly, quarterly or yearly), features and active/inactive status. A plan that has subscriptions can only be deactivated, not deleted. |
-| **Subscriptions** | Create, edit, cancel and renew. The expiry date is calculated from the billing cycle, and the status (Active, Expiring soon, Expired or Cancelled) is derived from dates. Can be filtered by status or plan and searched. |
+| **Subscriptions** | Create, edit, cancel and renew. Each subscription carries its own service name, billing cycle (monthly, quarterly or yearly) and amount. The expiry date is calculated from the billing cycle, and the status (Active, Expiring soon, Expired or Cancelled) is derived from dates. Can be filtered by status and searched. |
 | **Renewals** | Overdue (red), expiring within 7 days (orange) and later in the window (green), with a selectable 7–90 day window (30 by default). One-click renew and full renewal history. |
 | **Payments** | Record payments manually, mark them paid, update status (Paid, Pending or Failed), filter by status, overdue or date range, and see totals by status. |
-| **Reports** | Revenue, active and expired counts, pending payments, plan popularity, customer distribution and renewal trends, with a date-range filter and 7 CSV exports. |
+| **Reports** | Revenue, active and expired counts, pending payments, service popularity, customer distribution and renewal trends, with a date-range filter and 7 CSV exports. |
 | **Notifications** | In-app renewal reminders, expiry alerts and failed-payment alerts, created automatically with no duplicates. |
 | **Settings** | Profile, password change, and (for admins) user and role management. |
 
@@ -68,7 +67,6 @@ The login page has one-click buttons that fill in each account.
 | Capability | Admin | Staff | Customer |
 |---|:-:|:-:|:-:|
 | Manage users | ✓ | | |
-| Manage plans | ✓ | view | |
 | Register and edit customers | ✓ | ✓ | |
 | Delete customers | ✓ | | |
 | Create, edit and cancel subscriptions | ✓ | ✓ | own only, read-only |
@@ -88,7 +86,7 @@ These permissions are enforced by the API, not only hidden in the UI. Customers 
 4. **Renewing** extends from the current expiry date, so no paid time is lost. If the subscription has already expired, the new period starts today. Each renewal writes a `renewal_history` row and a new payment record (pending unless marked paid). Earlier payments and renewals are never changed or deleted.
 5. **Revenue** counts only payments with status `paid`, dated by `paid_on`.
 6. A subscription's payment status mirrors its most recent payment.
-7. A customer can't hold two current subscriptions to the same plan.
+7. A customer can't hold two current subscriptions to the same service (names are compared ignoring case).
 
 ---
 
@@ -115,12 +113,12 @@ backend/
     __init__.py        app factory, error handlers, health check
     config.py          env-driven configuration
     extensions.py      SQLAlchemy (+ SQLite foreign keys)
-    models.py          Users, Customers, SubscriptionPlans, Subscriptions,
+    models.py          Users, Customers, Subscriptions,
                        Payments, RenewalHistory, Notifications
     auth.py            signed bearer tokens, role decorators
     utils.py           validation, errors, pagination
     services/          dates, subscriptions, payments, notifications, analytics
-    routes/            auth, users, customers, plans, subscriptions,
+    routes/            auth, users, customers, subscriptions,
                        payments, renewals, insights (dashboard/reports/search)
     metrics.py         Prometheus /metrics
     seed.py            demo data
@@ -145,7 +143,6 @@ All endpoints are under `/api` and need `Authorization: Bearer <token>`, except 
 | `/auth/login`, `/auth/me`, `/auth/change-password` | POST · GET/PUT · POST |
 | `/users[/<id>]` | GET POST · PUT DELETE |
 | `/customers[/<id>]` | GET POST · GET PUT DELETE |
-| `/plans[/<id>]` | GET POST · GET PUT DELETE |
 | `/subscriptions[/<id>]` | GET POST · GET PUT |
 | `/subscriptions/<id>/cancel`, `/subscriptions/<id>/renew` | POST |
 | `/payments[/<id>]` | GET POST · GET PUT |
@@ -153,7 +150,7 @@ All endpoints are under `/api` and need `Authorization: Bearer <token>`, except 
 | `/dashboard`, `/search?q=`, `/notifications` | GET |
 | `/reports/summary?from&to`, `/reports/export/<report>?from&to` | GET (CSV) |
 
-The export reports are `revenue`, `payments`, `pending-payments`, `subscriptions`, `plans`, `renewals` and `customers`.
+The export reports are `revenue`, `payments`, `pending-payments`, `subscriptions`, `services`, `renewals` and `customers`.
 
 Errors are returned as JSON (`{"error": "...", "errors": {"field": "..."}}`) with these status codes: 400 bad request, 401 unauthenticated, 403 forbidden, 404 not found, 409 conflict, 422 validation.
 
@@ -163,7 +160,7 @@ Errors are returned as JSON (`{"error": "...", "errors": {"field": "..."}}`) wit
 cd backend && pytest -q
 ```
 
-The suite covers authentication, password hashing, token invalidation, customer registration and CRUD, plan CRUD, subscription creation, expiry calculation including month-end edge cases, status detection, renewals (including history preservation and plan changes), cancellation, payment recording and status updates, revenue calculations, role-based access control, customer data isolation, reports, CSV exports and metrics.
+The suite covers authentication, password hashing, token invalidation, customer registration and CRUD, subscription creation, expiry calculation including month-end edge cases, status detection, renewals (including history preservation and billing-cycle changes), cancellation, payment recording and status updates, revenue calculations, role-based access control, customer data isolation, reports, CSV exports and metrics.
 
 ## DevOps
 

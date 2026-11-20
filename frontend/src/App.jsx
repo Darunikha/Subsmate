@@ -7,7 +7,6 @@ import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Payments from './pages/Payments';
-import Plans from './pages/Plans';
 import Renewals from './pages/Renewals';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -53,7 +52,6 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="customers" element={<Allow permission="viewCustomers"><Customers /></Allow>} />
         <Route path="customers/:id" element={<Allow permission="viewCustomers"><CustomerDetail /></Allow>} />
-        <Route path="plans" element={<Allow permission="viewPlans"><Plans /></Allow>} />
         <Route path="subscriptions" element={<Subscriptions />} />
         <Route path="subscriptions/:id" element={<SubscriptionDetail />} />
         <Route path="renewals" element={<Renewals />} />

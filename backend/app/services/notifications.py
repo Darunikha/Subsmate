@@ -72,7 +72,7 @@ def generate_renewal_reminders():
                 key=f"expired:{sub.id}:{sub.expiry_date.isoformat()}",
                 category="expired",
                 title=f"{sub.code} has expired",
-                message=f"{name}'s {sub.plan.name} subscription expired on "
+                message=f"{name}'s {sub.service_name} subscription expired on "
                 f"{sub.expiry_date.strftime('%b %d, %Y')}.",
                 link=f"/subscriptions/{sub.id}",
                 subscription_id=sub.id,
@@ -85,7 +85,7 @@ def generate_renewal_reminders():
                 key=f"renewal:{sub.id}:{sub.expiry_date.isoformat()}",
                 category="renewal",
                 title=f"Renewal due {when}",
-                message=f"{name}'s {sub.plan.name} subscription expires on "
+                message=f"{name}'s {sub.service_name} subscription expires on "
                 f"{sub.expiry_date.strftime('%b %d, %Y')}.",
                 link=f"/subscriptions/{sub.id}",
                 subscription_id=sub.id,
@@ -106,7 +106,7 @@ def notify_payment_failed(payment):
         category="payment",
         title=f"Payment {payment.code} failed",
         message=f"Payment of {payment.amount:.2f} for {sub.customer.full_name} "
-        f"({sub.plan.name}) was marked as failed.",
+        f"({sub.service_name}) was marked as failed.",
         link="/payments?status=failed",
         subscription_id=sub.id,
     )

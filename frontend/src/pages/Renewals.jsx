@@ -113,7 +113,7 @@ function History() {
                     <Link to={`/subscriptions/${r.subscription.id}`} className="cell-main">
                       <strong>{r.subscription.customer.full_name}</strong>
                       <span className="muted">
-                        {r.subscription.code} · {r.plan.name}
+                        {r.subscription.code} · {r.service_name}
                       </span>
                     </Link>
                   </td>

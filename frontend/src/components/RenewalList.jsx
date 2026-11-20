@@ -21,7 +21,7 @@ export default function RenewalList({ items, onChanged, compact }) {
             <div className="renewal-main">
               <strong>{sub.customer.full_name}</strong>
               <span className="muted">
-                {sub.plan.name} · {sub.status === 'expired' ? 'Expired' : 'Renews'} {formatDate(sub.expiry_date)}
+                {sub.service_name} · {sub.status === 'expired' ? 'Expired' : 'Renews'} {formatDate(sub.expiry_date)}
               </span>
             </div>
             <div className="renewal-amount">

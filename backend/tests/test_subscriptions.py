@@ -34,13 +34,13 @@ def test_add_months_negative():
 
 
 # ----------------------------------------------------------------- creation
-def _subscribe(client, headers, customer_id, plan_id, **extra):
-    payload = {"customer_id": customer_id, "plan_id": plan_id, **extra}
+def _subscribe(client, headers, customer_id, service, **extra):
+    payload = {"customer_id": customer_id, **service.payload(**extra)}
     return client.post("/api/subscriptions", headers=headers, json=payload)
 
 
-def test_create_subscription_calculates_expiry(client, auth, customer, plans):
-    response = _subscribe(client, auth("staff"), customer.id, plans["quarterly"].id, start_date="2026-01-31")
+def test_create_subscription_calculates_expiry(client, auth, customer, services):
+    response = _subscribe(client, auth("staff"), customer.id, services["quarterly"], start_date="2026-01-31")
     assert response.status_code == 201
     body = response.get_json()
     assert body["start_date"] == "2026-01-31"
@@ -52,9 +52,9 @@ def test_create_subscription_calculates_expiry(client, auth, customer, plans):
     assert body["payments"][0]["due_date"] == "2026-01-31"
 
 
-def test_create_subscription_with_paid_initial_payment(client, auth, customer, plans):
+def test_create_subscription_with_paid_initial_payment(client, auth, customer, services):
     response = _subscribe(
-        client, auth("admin"), customer.id, plans["monthly"].id,
+        client, auth("admin"), customer.id, services["monthly"],
         payment={"status": "paid", "method": "card", "reference": "TX-1"},
     )
     body = response.get_json()
@@ -63,21 +63,28 @@ def test_create_subscription_with_paid_initial_payment(client, auth, customer, p
     assert body["payments"][0]["paid_on"] == date.today().isoformat()
 
 
-def test_create_subscription_custom_amount_and_default_start(client, auth, customer, plans):
-    body = _subscribe(client, auth("staff"), customer.id, plans["yearly"].id, amount=900).get_json()
+def test_create_subscription_custom_amount_and_default_start(client, auth, customer, services):
+    body = _subscribe(client, auth("staff"), customer.id, services["yearly"], amount=900).get_json()
     assert body["amount"] == 900
     assert body["start_date"] == date.today().isoformat()
     assert body["expiry_date"] == calculate_expiry(date.today(), "yearly").isoformat()
 
 
-def test_create_subscription_rejects_inactive_plan(client, auth, customer, plans):
-    response = _subscribe(client, auth("staff"), customer.id, plans["inactive"].id)
-    assert response.status_code == 400
+def test_create_subscription_validates_service_fields(client, auth, customer):
+    base = {"customer_id": customer.id, "service_name": "Gym", "billing_cycle": "monthly", "amount": 30}
+    for bad in ({"billing_cycle": "weekly"}, {"service_name": "  "}, {"amount": -5}, {"amount": "abc"}):
+        response = client.post("/api/subscriptions", headers=auth("staff"), json={**base, **bad})
+        assert response.status_code == 422, bad
+    missing_amount = {k: v for k, v in base.items() if k != "amount"}
+    assert client.post("/api/subscriptions", headers=auth("staff"), json=missing_amount).status_code == 422
+    assert client.post("/api/subscriptions", headers=auth("staff"), json=base).status_code == 201
 
 
-def test_create_subscription_rejects_duplicate_current_plan(client, auth, customer, plans):
-    assert _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).status_code == 201
-    assert _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).status_code == 409
+def test_create_subscription_rejects_duplicate_current_service(client, auth, customer, services):
+    assert _subscribe(client, auth("staff"), customer.id, services["monthly"]).status_code == 201
+    assert _subscribe(client, auth("staff"), customer.id, services["monthly"]).status_code == 409
+    shouted = services["monthly"].name.upper()  # names are compared ignoring case
+    assert _subscribe(client, auth("staff"), customer.id, services["monthly"], service_name=shouted).status_code == 409
 
 
 def test_create_subscription_requires_fields(client, auth):
@@ -85,58 +92,59 @@ def test_create_subscription_requires_fields(client, auth):
     assert response.status_code == 422
 
 
-def test_create_subscription_unknown_customer(client, auth, plans):
-    assert _subscribe(client, auth("staff"), 9999, plans["monthly"].id).status_code == 404
+def test_create_subscription_unknown_customer(client, auth, services):
+    assert _subscribe(client, auth("staff"), 9999, services["monthly"]).status_code == 404
 
 
 # ----------------------------------------------------------------- status detection
-def _make_sub(customer, plan, start, expiry, status="active"):
-    sub = Subscription(customer=customer, plan=plan, start_date=start, expiry_date=expiry,
-                       amount=plan.price, status=status, payment_status="paid")
+def _make_sub(customer, service, start, expiry, status="active"):
+    sub = Subscription(customer=customer, service_name=service.name, billing_cycle=service.billing_cycle,
+                       start_date=start, expiry_date=expiry, amount=service.price,
+                       status=status, payment_status="paid")
     db.session.add(sub)
     db.session.commit()
     return sub
 
 
-def test_status_is_derived_from_dates(app, customer, plans):
+def test_status_is_derived_from_dates(app, customer, services):
     today = date.today()
-    plan = plans["monthly"]
-    expired = _make_sub(customer, plan, today - timedelta(days=40), today - timedelta(days=1))
-    soon = _make_sub(customer, plan, today - timedelta(days=25), today + timedelta(days=5))
-    active = _make_sub(customer, plan, today, today + timedelta(days=60))
-    cancelled = _make_sub(customer, plan, today, today + timedelta(days=60), status="cancelled")
+    service = services["monthly"]
+    expired = _make_sub(customer, service, today - timedelta(days=40), today - timedelta(days=1))
+    soon = _make_sub(customer, service, today - timedelta(days=25), today + timedelta(days=5))
+    active = _make_sub(customer, service, today, today + timedelta(days=60))
+    cancelled = _make_sub(customer, service, today, today + timedelta(days=60), status="cancelled")
     assert expired.effective_status == "expired"
     assert soon.effective_status == "expiring_soon"
     assert active.effective_status == "active"
     assert cancelled.effective_status == "cancelled"
 
 
-def test_status_filter_matches_derived_status(client, auth, customer, plans):
+def test_status_filter_matches_derived_status(client, auth, customer, services):
     today = date.today()
-    _make_sub(customer, plans["monthly"], today - timedelta(days=40), today - timedelta(days=3))
-    _make_sub(customer, plans["quarterly"], today - timedelta(days=80), today + timedelta(days=3))
-    _make_sub(customer, plans["yearly"], today, today + timedelta(days=300))
+    _make_sub(customer, services["monthly"], today - timedelta(days=40), today - timedelta(days=3))
+    _make_sub(customer, services["quarterly"], today - timedelta(days=80), today + timedelta(days=3))
+    _make_sub(customer, services["yearly"], today, today + timedelta(days=300))
     for status, expected in (("expired", 1), ("expiring_soon", 1), ("active", 1), ("current", 2)):
         body = client.get(f"/api/subscriptions?status={status}", headers=auth("admin")).get_json()
         assert body["total"] == expected, status
         assert all(item["status"] == status for item in body["items"]) or status == "current"
 
 
-def test_upcoming_renewals_lists_30_day_window_and_overdue(client, auth, customer, plans):
+def test_upcoming_renewals_lists_30_day_window_and_overdue(client, auth, customer, services):
     today = date.today()
-    _make_sub(customer, plans["monthly"], today - timedelta(days=40), today - timedelta(days=2))
-    _make_sub(customer, plans["quarterly"], today - timedelta(days=70), today + timedelta(days=20))
-    _make_sub(customer, plans["yearly"], today, today + timedelta(days=200))
+    _make_sub(customer, services["monthly"], today - timedelta(days=40), today - timedelta(days=2))
+    _make_sub(customer, services["quarterly"], today - timedelta(days=70), today + timedelta(days=20))
+    _make_sub(customer, services["yearly"], today, today + timedelta(days=200))
     body = client.get("/api/renewals/upcoming", headers=auth("staff")).get_json()
     assert body["counts"]["overdue"] == 1
     assert body["counts"]["upcoming"] == 1
-    assert body["upcoming"][0]["plan"]["name"] == "Pro Quarterly"
+    assert body["upcoming"][0]["service_name"] == "Pro Quarterly"
 
 
 # ----------------------------------------------------------------- renewal
-def test_renew_active_subscription_extends_from_current_expiry(client, auth, customer, plans):
+def test_renew_active_subscription_extends_from_current_expiry(client, auth, customer, services):
     today = date.today()
-    sub = _make_sub(customer, plans["monthly"], today - timedelta(days=25), today + timedelta(days=5))
+    sub = _make_sub(customer, services["monthly"], today - timedelta(days=25), today + timedelta(days=5))
     original_expiry = sub.expiry_date
     response = client.post(
         f"/api/subscriptions/{sub.id}/renew",
@@ -151,18 +159,18 @@ def test_renew_active_subscription_extends_from_current_expiry(client, auth, cus
     assert body["subscription"]["payment_status"] == "paid"
 
 
-def test_renew_expired_subscription_restarts_from_today(client, auth, customer, plans):
+def test_renew_expired_subscription_restarts_from_today(client, auth, customer, services):
     today = date.today()
-    sub = _make_sub(customer, plans["quarterly"], today - timedelta(days=200), today - timedelta(days=100))
+    sub = _make_sub(customer, services["quarterly"], today - timedelta(days=200), today - timedelta(days=100))
     body = client.post(f"/api/subscriptions/{sub.id}/renew", headers=auth("staff"), json={}).get_json()
     assert body["subscription"]["expiry_date"] == calculate_expiry(today, "quarterly").isoformat()
     assert body["subscription"]["status"] == "active"
     assert body["subscription"]["payment_status"] == "pending"
 
 
-def test_renewal_keeps_previous_history_and_payments(client, auth, customer, plans):
+def test_renewal_keeps_previous_history_and_payments(client, auth, customer, services):
     created = _subscribe(
-        client, auth("staff"), customer.id, plans["monthly"].id, payment={"status": "paid"}
+        client, auth("staff"), customer.id, services["monthly"], payment={"status": "paid"}
     ).get_json()
     sub_id = created["id"]
     first_payment_id = created["payments"][0]["id"]
@@ -181,19 +189,21 @@ def test_renewal_keeps_previous_history_and_payments(client, auth, customer, pla
     assert expiries[1] > expiries[0]
 
 
-def test_renew_with_plan_change(client, auth, customer, plans):
-    sub = _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).get_json()
+def test_renew_with_billing_cycle_and_amount_change(client, auth, customer, services):
+    sub = _subscribe(client, auth("staff"), customer.id, services["monthly"]).get_json()
     body = client.post(
-        f"/api/subscriptions/{sub['id']}/renew", headers=auth("staff"), json={"plan_id": plans["yearly"].id}
+        f"/api/subscriptions/{sub['id']}/renew", headers=auth("staff"),
+        json={"billing_cycle": "yearly", "amount": 900},
     ).get_json()
-    assert body["subscription"]["plan"]["id"] == plans["yearly"].id
-    assert body["subscription"]["amount"] == 1000
+    assert body["subscription"]["billing_cycle"] == "yearly"
+    assert body["subscription"]["amount"] == 900
     expected = calculate_expiry(date.fromisoformat(sub["expiry_date"]), "yearly")
     assert body["subscription"]["expiry_date"] == expected.isoformat()
+    assert body["renewal"]["billing_cycle"] == "yearly"
 
 
-def test_cannot_renew_cancelled_subscription(client, auth, customer, plans):
-    sub = _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).get_json()
+def test_cannot_renew_cancelled_subscription(client, auth, customer, services):
+    sub = _subscribe(client, auth("staff"), customer.id, services["monthly"]).get_json()
     assert client.post(f"/api/subscriptions/{sub['id']}/cancel", headers=auth("staff"),
                        json={"reason": "Closed"}).status_code == 200
     response = client.post(f"/api/subscriptions/{sub['id']}/renew", headers=auth("staff"), json={})
@@ -201,11 +211,11 @@ def test_cannot_renew_cancelled_subscription(client, auth, customer, plans):
 
 
 # ----------------------------------------------------------------- update & cancel
-def test_update_subscription_recalculates_expiry(client, auth, customer, plans):
-    sub = _subscribe(client, auth("staff"), customer.id, plans["monthly"].id, start_date="2026-03-01").get_json()
+def test_update_subscription_recalculates_expiry(client, auth, customer, services):
+    sub = _subscribe(client, auth("staff"), customer.id, services["monthly"], start_date="2026-03-01").get_json()
     response = client.put(
         f"/api/subscriptions/{sub['id']}", headers=auth("staff"),
-        json={"plan_id": plans["quarterly"].id, "start_date": "2026-04-15"},
+        json={"billing_cycle": "quarterly", "amount": 140, "start_date": "2026-04-15"},
     )
     assert response.status_code == 200
     body = response.get_json()
@@ -213,13 +223,13 @@ def test_update_subscription_recalculates_expiry(client, auth, customer, plans):
     assert body["amount"] == 140
 
 
-def test_cancel_subscription(client, auth, customer, plans):
-    sub = _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).get_json()
+def test_cancel_subscription(client, auth, customer, services):
+    sub = _subscribe(client, auth("staff"), customer.id, services["monthly"]).get_json()
     body = client.post(f"/api/subscriptions/{sub['id']}/cancel", headers=auth("admin"),
                        json={"reason": "Budget"}).get_json()
     assert body["status"] == "cancelled"
     assert body["cancellation_reason"] == "Budget"
     again = client.post(f"/api/subscriptions/{sub['id']}/cancel", headers=auth("admin"), json={})
     assert again.status_code == 400
-    # A cancelled subscription frees the customer to subscribe to the plan again.
-    assert _subscribe(client, auth("staff"), customer.id, plans["monthly"].id).status_code == 201
+    # A cancelled subscription frees the customer to subscribe to the service again.
+    assert _subscribe(client, auth("staff"), customer.id, services["monthly"]).status_code == 201

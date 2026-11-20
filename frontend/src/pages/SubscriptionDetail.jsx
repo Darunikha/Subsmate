@@ -33,7 +33,7 @@ export default function SubscriptionDetail() {
         back={<BackLink to="/subscriptions" label={isCustomer ? 'My Subscriptions' : 'Subscriptions'} />}
         title={
           <span className="title-with-badge">
-            {s.plan.name} <StatusBadge status={s.status} />
+            {s.service_name} <StatusBadge status={s.status} />
           </span>
         }
         subtitle={`${s.code} · ${s.customer.full_name}`}
@@ -90,7 +90,7 @@ export default function SubscriptionDetail() {
         </div>
         <div>
           <span>Billing cycle</span>
-          <strong>{CYCLE_LABELS[s.plan.billing_cycle]}</strong>
+          <strong>{CYCLE_LABELS[s.billing_cycle]}</strong>
         </div>
         <div>
           <span>Amount</span>
@@ -153,7 +153,7 @@ export default function SubscriptionDetail() {
                       </td>
                       {can('managePayments') && (
                         <td className="actions-col">
-                          <Button size="sm" onClick={() => setEditingPayment({ ...p, subscription: { customer: s.customer, plan: s.plan } })}>
+                          <Button size="sm" onClick={() => setEditingPayment({ ...p, subscription: { customer: s.customer, service_name: s.service_name } })}>
                             Update
                           </Button>
                         </td>
@@ -179,7 +179,7 @@ export default function SubscriptionDetail() {
                       {formatDate(r.previous_expiry_date)} → {formatDate(r.new_expiry_date)}
                     </strong>
                     <span className="muted">
-                      {r.plan.name} · {money(r.amount)}
+                      {CYCLE_LABELS[r.billing_cycle]} · {money(r.amount)}
                       {r.payment_status && ` · ${r.payment_status}`}
                     </span>
                     <span className="muted small">

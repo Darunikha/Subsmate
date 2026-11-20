@@ -1,9 +1,8 @@
 """Database models for Subsmate.
 
-Tables: users, customers, subscription_plans, subscriptions, payments,
+Tables: users, customers, subscriptions, payments,
 renewal_history, notifications.
 """
-import json
 from datetime import datetime, timezone
 
 from flask import current_app
@@ -129,63 +128,13 @@ class Customer(TimestampMixin, db.Model):
         return data
 
 
-class SubscriptionPlan(TimestampMixin, db.Model):
-    __tablename__ = "subscription_plans"
-    __table_args__ = (
-        CheckConstraint("price >= 0", name="ck_plans_price"),
-        CheckConstraint(_in("billing_cycle", BILLING_CYCLES), name="ck_plans_cycle"),
-        CheckConstraint(_in("status", ACTIVE_INACTIVE), name="ck_plans_status"),
-    )
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False, unique=True)
-    description = db.Column(db.Text)
-    price = db.Column(db.Numeric(10, 2, asdecimal=False), nullable=False)
-    billing_cycle = db.Column(db.String(20), nullable=False)
-    features_json = db.Column("features", db.Text, nullable=False, default="[]")
-    status = db.Column(db.String(20), nullable=False, default="active")
-
-    subscriptions = db.relationship("Subscription", back_populates="plan")
-
-    @property
-    def features(self):
-        try:
-            return json.loads(self.features_json or "[]")
-        except ValueError:
-            return []
-
-    @features.setter
-    def features(self, values):
-        self.features_json = json.dumps([str(v).strip() for v in values if str(v).strip()])
-
-    def to_dict(self, with_stats=False):
-        data = {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "price": _money(self.price),
-            "billing_cycle": self.billing_cycle,
-            "features": self.features,
-            "status": self.status,
-            "created_at": _iso(self.created_at),
-        }
-        if with_stats:
-            data["subscriber_count"] = sum(
-                1 for s in self.subscriptions if s.effective_status in ("active", "expiring_soon")
-            )
-            data["total_subscriptions"] = len(self.subscriptions)
-        return data
-
-    def summary(self):
-        return {"id": self.id, "name": self.name, "billing_cycle": self.billing_cycle}
-
-
 class Subscription(TimestampMixin, db.Model):
     __tablename__ = "subscriptions"
     __table_args__ = (
         CheckConstraint("expiry_date > start_date", name="ck_subscriptions_dates"),
         CheckConstraint("amount >= 0", name="ck_subscriptions_amount"),
         CheckConstraint(_in("status", SUBSCRIPTION_STATES), name="ck_subscriptions_status"),
+        CheckConstraint(_in("billing_cycle", BILLING_CYCLES), name="ck_subscriptions_cycle"),
         CheckConstraint(_in("payment_status", PAYMENT_STATUSES), name="ck_subscriptions_pay"),
     )
 
@@ -193,12 +142,8 @@ class Subscription(TimestampMixin, db.Model):
     customer_id = db.Column(
         db.Integer, db.ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True
     )
-    plan_id = db.Column(
-        db.Integer,
-        db.ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
-        nullable=False,
-        index=True,
-    )
+    service_name = db.Column(db.String(120), nullable=False, index=True)
+    billing_cycle = db.Column(db.String(20), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     expiry_date = db.Column(db.Date, nullable=False, index=True)
     amount = db.Column(db.Numeric(10, 2, asdecimal=False), nullable=False)
@@ -211,7 +156,6 @@ class Subscription(TimestampMixin, db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
 
     customer = db.relationship("Customer", back_populates="subscriptions")
-    plan = db.relationship("SubscriptionPlan", back_populates="subscriptions")
     payments = db.relationship(
         "Payment", back_populates="subscription", order_by="Payment.id.desc()"
     )
@@ -249,7 +193,8 @@ class Subscription(TimestampMixin, db.Model):
             "id": self.id,
             "code": self.code,
             "customer": {"id": self.customer.id, "full_name": self.customer.full_name},
-            "plan": self.plan.summary(),
+            "service_name": self.service_name,
+            "billing_cycle": self.billing_cycle,
             "expiry_date": _iso(self.expiry_date),
             "status": self.effective_status,
         }
@@ -263,7 +208,8 @@ class Subscription(TimestampMixin, db.Model):
                 "full_name": self.customer.full_name,
                 "email": self.customer.email,
             },
-            "plan": self.plan.summary(),
+            "service_name": self.service_name,
+            "billing_cycle": self.billing_cycle,
             "start_date": _iso(self.start_date),
             "expiry_date": _iso(self.expiry_date),
             "amount": _money(self.amount),
@@ -343,6 +289,7 @@ class RenewalHistory(db.Model):
     __tablename__ = "renewal_history"
     __table_args__ = (
         CheckConstraint("new_expiry_date > previous_expiry_date", name="ck_renewal_dates"),
+        CheckConstraint(_in("billing_cycle", BILLING_CYCLES), name="ck_renewal_cycle"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -352,9 +299,8 @@ class RenewalHistory(db.Model):
         nullable=False,
         index=True,
     )
-    plan_id = db.Column(
-        db.Integer, db.ForeignKey("subscription_plans.id", ondelete="RESTRICT"), nullable=False
-    )
+    service_name = db.Column(db.String(120), nullable=False)
+    billing_cycle = db.Column(db.String(20), nullable=False)
     payment_id = db.Column(db.Integer, db.ForeignKey("payments.id", ondelete="SET NULL"))
     previous_expiry_date = db.Column(db.Date, nullable=False)
     period_start = db.Column(db.Date, nullable=False)
@@ -365,7 +311,6 @@ class RenewalHistory(db.Model):
     renewed_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
 
     subscription = db.relationship("Subscription", back_populates="renewals")
-    plan = db.relationship("SubscriptionPlan")
     payment = db.relationship("Payment")
     renewed_by = db.relationship("User")
 
@@ -373,7 +318,8 @@ class RenewalHistory(db.Model):
         data = {
             "id": self.id,
             "subscription_id": self.subscription_id,
-            "plan": self.plan.summary(),
+            "service_name": self.service_name,
+            "billing_cycle": self.billing_cycle,
             "previous_expiry_date": _iso(self.previous_expiry_date),
             "period_start": _iso(self.period_start),
             "new_expiry_date": _iso(self.new_expiry_date),

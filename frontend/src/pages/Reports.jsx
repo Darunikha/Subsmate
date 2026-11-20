@@ -4,7 +4,7 @@ import { HorizontalBars, RevenueBars, TrendLines } from '../components/charts';
 import { Button, Card, EmptyState, ErrorState, PageHeader, Spinner, StatusBadge, useToast } from '../components/ui';
 import { api } from '../lib/api';
 import { useApi } from '../lib/hooks';
-import { CYCLE_LABELS, formatDate, money, todayISO } from '../lib/format';
+import { formatDate, money, todayISO } from '../lib/format';
 
 function isoMonthsAgo(months) {
   const d = new Date();
@@ -68,7 +68,7 @@ export default function Reports() {
     <>
       <PageHeader
         title="Reports"
-        subtitle="Revenue, renewals and plan performance from recorded data."
+        subtitle="Revenue, renewals and service performance from recorded data."
         actions={<ExportButton report="subscriptions" range={range} label="Export subscriptions" />}
       />
 
@@ -115,24 +115,22 @@ export default function Reports() {
           </div>
 
           <div className="grid-1-1">
-            <Card title="Plan popularity" subtitle="Active subscriptions per plan" actions={<ExportButton report="plans" range={range} />}>
-              <HorizontalBars data={data.plan_popularity} dataKey="active" labelKey="plan" name="Active subscriptions" />
+            <Card title="Service popularity" subtitle="Active subscriptions per service" actions={<ExportButton report="services" range={range} />}>
+              <HorizontalBars data={data.service_popularity} dataKey="active" labelKey="service" name="Active subscriptions" />
               <div className="table-wrap">
                 <table className="table table-compact">
                   <thead>
                     <tr>
-                      <th>Plan</th>
+                      <th>Service</th>
                       <th className="num">Active</th>
                       <th className="num">Total</th>
                       <th className="num">Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.plan_popularity.map((p) => (
-                      <tr key={p.plan_id}>
-                        <td>
-                          {p.plan} <span className="muted small">· {CYCLE_LABELS[p.billing_cycle]}</span>
-                        </td>
+                    {data.service_popularity.map((p) => (
+                      <tr key={p.service}>
+                        <td>{p.service}</td>
                         <td className="num">{p.active}</td>
                         <td className="num">{p.subscriptions}</td>
                         <td className="num">{money(p.revenue)}</td>
@@ -165,7 +163,7 @@ export default function Reports() {
                     <tr>
                       <th>Payment</th>
                       <th>Customer</th>
-                      <th className="hide-sm">Plan</th>
+                      <th className="hide-sm">Service</th>
                       <th>Due</th>
                       <th className="num">Amount</th>
                       <th>Status</th>
@@ -178,7 +176,7 @@ export default function Reports() {
                         <td>
                           <Link to={`/subscriptions/${p.subscription.id}`}>{p.subscription.customer.full_name}</Link>
                         </td>
-                        <td className="hide-sm">{p.subscription.plan.name}</td>
+                        <td className="hide-sm">{p.subscription.service_name}</td>
                         <td>
                           {formatDate(p.due_date)}
                           {p.is_overdue && <span className="days days-expired"> · overdue</span>}

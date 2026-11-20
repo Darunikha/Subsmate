@@ -16,7 +16,6 @@ const NAV = [
     section: 'Manage',
     items: [
       { to: '/customers', label: 'Customers', icon: 'users', permission: 'viewCustomers' },
-      { to: '/plans', label: 'Subscription Plans', icon: 'layers', permission: 'viewPlans' },
       { to: '/subscriptions', label: 'Subscriptions', icon: 'card', customerLabel: 'My Subscriptions' },
     ],
   },
@@ -143,7 +142,7 @@ function GlobalSearch() {
     setTerm('');
     navigate(path);
   };
-  const empty = results && !results.customers.length && !results.subscriptions.length && !results.plans.length;
+  const empty = results && !results.customers.length && !results.subscriptions.length;
 
   return (
     <div className="global-search" ref={ref}>
@@ -152,7 +151,7 @@ function GlobalSearch() {
         <input
           ref={inputRef}
           type="search"
-          placeholder="Search customers, subscriptions, plans…"
+          placeholder="Search customers or subscriptions…"
           value={term}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
@@ -187,25 +186,11 @@ function GlobalSearch() {
                   <Icon name="card" size={17} />
                   <span>
                     <strong>
-                      {s.code} · {s.plan.name}
+                      {s.code} · {s.service_name}
                     </strong>
                     <small>{s.customer.full_name}</small>
                   </span>
                   <StatusBadge status={s.status} />
-                </button>
-              ))}
-            </div>
-          )}
-          {results.plans.length > 0 && (
-            <div>
-              <p className="dropdown-label">Plans</p>
-              {results.plans.map((p) => (
-                <button key={p.id} type="button" className="dropdown-item" onClick={() => go('/plans')}>
-                  <Icon name="layers" size={17} />
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>${p.price} · {p.billing_cycle}</small>
-                  </span>
                 </button>
               ))}
             </div>

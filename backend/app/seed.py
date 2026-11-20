@@ -1,5 +1,6 @@
 """Realistic demo data, generated relative to today so the dashboard always looks live."""
 import random
+from collections import namedtuple
 from datetime import datetime, time, timedelta
 
 from .extensions import db
@@ -8,7 +9,6 @@ from .models import (
     Payment,
     RenewalHistory,
     Subscription,
-    SubscriptionPlan,
     User,
 )
 from .services.dates import calculate_expiry, today
@@ -19,21 +19,17 @@ DEMO_USERS = [
 ]
 DEMO_CUSTOMER_LOGIN = ("priya.sharma@brightdental.com", "Customer@123")
 
-PLANS = [
-    ("Website Care Starter", "Monthly updates, uptime monitoring and security patches for small sites.",
-     29, "monthly", ["Uptime monitoring", "Monthly plugin updates", "Email support"]),
-    ("Website Care Business", "Priority maintenance for business websites with content edits included.",
-     79, "monthly", ["Everything in Starter", "2 hours of content edits", "Priority support", "Daily backups"]),
-    ("Cloud Backup Pro", "Encrypted off-site backups with 90-day retention.",
-     49, "monthly", ["500 GB storage", "90-day retention", "Restore assistance"]),
-    ("IT Support Quarterly", "Remote helpdesk and device management billed every quarter.",
-     249, "quarterly", ["Up to 10 devices", "Remote helpdesk", "Quarterly health check"]),
-    ("SEO Growth", "Ongoing search optimisation with quarterly strategy reviews.",
-     399, "quarterly", ["Keyword tracking", "Monthly report", "Quarterly strategy call"]),
-    ("Managed Hosting Annual", "Fully managed hosting with SSL, CDN and staging.",
-     899, "yearly", ["Managed VPS", "Free SSL & CDN", "Staging environment", "24/7 monitoring"]),
-    ("Legacy Basic", "Retired entry plan kept for historical subscriptions.",
-     19, "monthly", ["Basic monitoring"]),
+Service = namedtuple("Service", "name price cycle retired", defaults=(False,))
+
+# Templates used only to generate demo subscriptions; the app has no catalogue of services.
+SERVICES = [
+    Service("Website Care Starter", 29, "monthly"),
+    Service("Website Care Business", 79, "monthly"),
+    Service("Cloud Backup Pro", 49, "monthly"),
+    Service("IT Support Quarterly", 249, "quarterly"),
+    Service("SEO Growth", 399, "quarterly"),
+    Service("Managed Hosting Annual", 899, "yearly"),
+    Service("Legacy Basic", 19, "monthly", retired=True),  # never renewed
 ]
 
 CUSTOMERS = [
@@ -84,18 +80,8 @@ def seed_if_empty():
         staff.append(user)
     admin, staff_user = staff
 
-    plans = []
-    for name, description, price, cycle, features in PLANS:
-        plan = SubscriptionPlan(
-            name=name, description=description, price=price, billing_cycle=cycle,
-            status="inactive" if name == "Legacy Basic" else "active",
-            created_at=_dt(current_day - timedelta(days=500)),
-        )
-        plan.features = features
-        db.session.add(plan)
-        plans.append(plan)
-    active_plans = [p for p in plans if p.status == "active"]
-    legacy = plans[-1]
+    active_services = [svc for svc in SERVICES if not svc.retired]
+    legacy = next(svc for svc in SERVICES if svc.retired)
 
     customers = []
     for index, (full_name, email, phone) in enumerate(CUSTOMERS):
@@ -121,25 +107,25 @@ def seed_if_empty():
     # The last customer is newly registered with no subscriptions yet.
     for index, customer in enumerate(customers[:-1]):
         count = 2 if index in (0, 1, 4, 7, 10, 13, 17) else 1
-        chosen = rng.sample(active_plans, count)
+        chosen = rng.sample(active_services, count)
         if index in (5, 15):
             chosen = [legacy]
-        for plan in chosen:
+        for service in chosen:
             earliest = max((current_day - customer.registration_date).days, 1)
             offset = rng.randint(0, earliest)
             if index < 3:  # make sure the demo customer has a near-term renewal
                 offset = rng.randint(20, earliest + 20)
             start = max(customer.registration_date, current_day - timedelta(days=offset))
-            _build_history(rng, customer, plan, start, current_day, staff_user, index)
+            _build_history(rng, customer, service, start, current_day, staff_user, index)
 
     db.session.commit()
     return True
 
 
-def _build_history(rng, customer, plan, start, current_day, staff_user, index):
+def _build_history(rng, customer, service, start, current_day, staff_user, index):
     sub = Subscription(
-        customer=customer, plan=plan, start_date=start,
-        expiry_date=calculate_expiry(start, plan.billing_cycle), amount=plan.price,
+        customer=customer, service_name=service.name, billing_cycle=service.cycle, start_date=start,
+        expiry_date=calculate_expiry(start, service.cycle), amount=service.price,
         status="active", payment_status="paid", created_by_id=staff_user.id,
         created_at=_dt(start, 9),
     )
@@ -161,7 +147,7 @@ def _build_history(rng, customer, plan, start, current_day, staff_user, index):
     pay(start)
     # Walk forward through billing periods, renewing most of them.
     while sub.expiry_date <= current_day:
-        will_renew = plan.status == "active" and rng.random() < 0.86
+        will_renew = not service.retired and rng.random() < 0.86
         if not will_renew:
             if rng.random() < 0.4:
                 sub.status = "cancelled"
@@ -173,9 +159,10 @@ def _build_history(rng, customer, plan, start, current_day, staff_user, index):
         previous = sub.expiry_date
         renewed_on = previous - timedelta(days=rng.randint(0, 5))
         payment = pay(previous)
-        new_expiry = calculate_expiry(previous, plan.billing_cycle)
+        new_expiry = calculate_expiry(previous, service.cycle)
         db.session.add(RenewalHistory(
-            subscription=sub, plan=plan, payment=payment, previous_expiry_date=previous,
+            subscription=sub, service_name=service.name, billing_cycle=service.cycle,
+            payment=payment, previous_expiry_date=previous,
             period_start=previous, new_expiry_date=new_expiry, amount=sub.amount,
             renewed_by_id=staff_user.id, renewed_at=_dt(renewed_on, 14),
         ))

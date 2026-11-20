@@ -54,7 +54,7 @@ export default function Login() {
               <Icon name="wallet" size={18} /> Manual payment tracking with pending alerts
             </li>
             <li>
-              <Icon name="chart" size={18} /> Revenue, renewal and plan reports with CSV export
+              <Icon name="chart" size={18} /> Revenue, renewal and service reports with CSV export
             </li>
           </ul>
         </div>

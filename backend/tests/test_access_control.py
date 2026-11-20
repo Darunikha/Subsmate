@@ -3,11 +3,11 @@ import pytest
 
 
 @pytest.fixture()
-def two_subscriptions(client, auth, customer, other_customer, plans):
+def two_subscriptions(client, auth, customer, other_customer, services):
     own = client.post("/api/subscriptions", headers=auth("staff"),
-                      json={"customer_id": customer.id, "plan_id": plans["monthly"].id}).get_json()
+                      json={"customer_id": customer.id, **services["monthly"].payload()}).get_json()
     other = client.post("/api/subscriptions", headers=auth("staff"),
-                        json={"customer_id": other_customer.id, "plan_id": plans["monthly"].id}).get_json()
+                        json={"customer_id": other_customer.id, **services["monthly"].payload()}).get_json()
     return own, other
 
 
@@ -17,13 +17,10 @@ def two_subscriptions(client, auth, customer, other_customer, plans):
         ("customer", "get", "/api/customers", 403),
         ("customer", "get", "/api/users", 403),
         ("customer", "get", "/api/reports/summary", 403),
-        ("customer", "post", "/api/plans", 403),
         ("customer", "post", "/api/payments", 403),
         # Staff: day-to-day work (customers, subscriptions, payments) but no admin functions.
         ("staff", "get", "/api/users", 403),
         ("staff", "post", "/api/users", 403),
-        ("staff", "post", "/api/plans", 403),
-        ("staff", "put", "/api/plans/1", 403),
         ("staff", "delete", "/api/customers/1", 403),
         ("staff", "get", "/api/reports/summary", 403),
         ("staff", "get", "/api/reports/export/customers", 403),
@@ -76,13 +73,6 @@ def test_customer_dashboard_is_personal(client, auth, two_subscriptions):
     assert "total_customers" not in body["stats"]
 
 
-def test_customer_only_sees_active_plans(client, auth, plans):
-    names = {p["name"] for p in client.get("/api/plans", headers=auth("customer")).get_json()["items"]}
-    assert "Retired" not in names
-    names = {p["name"] for p in client.get("/api/plans", headers=auth("admin")).get_json()["items"]}
-    assert "Retired" in names
-
-
 def test_admin_user_management(client, auth):
     created = client.post("/api/users", headers=auth("admin"), json={
         "name": "New Biller", "email": "biller2@test.io", "password": "Biller@1234", "role": "staff",
@@ -101,11 +91,14 @@ def test_admin_cannot_lock_themselves_out(client, auth, users):
     assert client.delete(f"/api/users/{admin_id}", headers=auth("admin")).status_code == 400
 
 
-def test_customer_search_only_returns_own_subscriptions(client, auth, two_subscriptions, plans):
+def test_customer_search_only_returns_own_subscriptions(client, auth, two_subscriptions):
     own, other = two_subscriptions
     body = client.get("/api/search?q=Basic", headers=auth("customer")).get_json()
     assert [s["id"] for s in body["subscriptions"]] == [own["id"]]
-    assert body["customers"] == []
-    assert body["plans"] == []  # customers have no plans page, so no dead-end results
+    assert body["customers"] == []  # customers have no customers page, so no dead-end results
     staff_body = client.get("/api/search?q=Basic", headers=auth("staff")).get_json()
-    assert len(staff_body["plans"]) == 1
+    assert {s["id"] for s in staff_body["subscriptions"]} == {own["id"], other["id"]}
+
+
+def test_plans_module_no_longer_exists(client, auth):
+    assert client.get("/api/plans", headers=auth("admin")).status_code == 404

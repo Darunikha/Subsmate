@@ -132,7 +132,7 @@ export default function Payments() {
                 <tr>
                   <th>Payment</th>
                   {!isCustomer && <th>Customer</th>}
-                  <th className="hide-sm">Plan</th>
+                  <th className="hide-sm">Service</th>
                   <th>Due</th>
                   <th className="hide-sm">Paid on</th>
                   <th className="hide-sm">Method</th>
@@ -158,7 +158,7 @@ export default function Payments() {
                         </Link>
                       </td>
                     )}
-                    <td className="hide-sm">{p.subscription.plan.name}</td>
+                    <td className="hide-sm">{p.subscription.service_name}</td>
                     <td>
                       <div className="cell-main">
                         <span>{formatDate(p.due_date)}</span>

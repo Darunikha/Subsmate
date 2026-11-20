@@ -5,8 +5,8 @@ from flask import current_app
 from sqlalchemy import and_
 
 from ..extensions import db
-from ..models import RenewalHistory, Subscription, utcnow
-from ..utils import APIError, clean_str, parse_amount, parse_date
+from ..models import BILLING_CYCLES, RenewalHistory, Subscription, utcnow
+from ..utils import APIError, clean_str, parse_amount, parse_choice, parse_date
 from .dates import calculate_expiry, today
 from .payments import record_payment
 
@@ -31,38 +31,48 @@ def status_condition(status, on_date=None):
     raise APIError(f"Unknown status filter. Use one of: {', '.join(STATUS_FILTERS)}.", 400)
 
 
-def _ensure_no_duplicate(customer_id, plan_id, exclude_id=None):
+def _service_name(value):
+    return clean_str(value, "service_name", 120, required=True)
+
+
+def _billing_cycle(value):
+    return parse_choice(value, "billing_cycle", tuple(BILLING_CYCLES))
+
+
+def _ensure_no_duplicate(customer_id, service_name, exclude_id=None):
     query = Subscription.query.filter(
         Subscription.customer_id == customer_id,
-        Subscription.plan_id == plan_id,
+        db.func.lower(Subscription.service_name) == service_name.lower(),
         status_condition("current"),
     )
     if exclude_id:
         query = query.filter(Subscription.id != exclude_id)
     if query.first():
         raise APIError(
-            "This customer already has a current subscription to this plan. "
+            "This customer already has a current subscription to this service. "
             "Renew the existing subscription instead.",
             409,
+            {"service_name": "Already subscribed."},
         )
 
 
-def create_subscription(customer, plan, data, user=None):
+def create_subscription(customer, data, user=None):
     if customer.status != "active":
         raise APIError("Subscriptions can only be created for active customers.", 400)
-    if plan.status != "active":
-        raise APIError("The selected plan is inactive.", 400)
 
+    service_name = _service_name(data.get("service_name"))
+    billing_cycle = _billing_cycle(data.get("billing_cycle"))
+    amount = parse_amount(data.get("amount"), "amount", allow_zero=True)
     start_date = parse_date(data.get("start_date"), "start_date", required=False) or today()
-    amount = parse_amount(data.get("amount"), "amount", allow_zero=True, required=False)
-    _ensure_no_duplicate(customer.id, plan.id)
+    _ensure_no_duplicate(customer.id, service_name)
 
     subscription = Subscription(
         customer=customer,
-        plan=plan,
+        service_name=service_name,
+        billing_cycle=billing_cycle,
         start_date=start_date,
-        expiry_date=calculate_expiry(start_date, plan.billing_cycle),
-        amount=amount if amount is not None else plan.price,
+        expiry_date=calculate_expiry(start_date, billing_cycle),
+        amount=amount,
         status="active",
         payment_status="pending",
         notes=clean_str(data.get("notes"), "notes", 1000),
@@ -89,21 +99,18 @@ def update_subscription(subscription, data):
 
 
 def _apply_update(subscription, data):
+    if "service_name" in data:
+        name = _service_name(data["service_name"])
+        if name.lower() != subscription.service_name.lower():
+            _ensure_no_duplicate(subscription.customer_id, name, exclude_id=subscription.id)
+        subscription.service_name = name
 
     recalculate = False
-    if "plan_id" in data and data["plan_id"] not in (None, "") and int(data["plan_id"]) != subscription.plan_id:
-        from ..models import SubscriptionPlan
-        from ..utils import get_or_404
-
-        plan = get_or_404(SubscriptionPlan, int(data["plan_id"]), "Plan")
-        if plan.status != "active":
-            raise APIError("The selected plan is inactive.", 400)
-        _ensure_no_duplicate(subscription.customer_id, plan.id, exclude_id=subscription.id)
-        subscription.plan = plan
-        recalculate = True
-        if "amount" not in data:
-            subscription.amount = plan.price
-
+    if "billing_cycle" in data:
+        cycle = _billing_cycle(data["billing_cycle"])
+        if cycle != subscription.billing_cycle:
+            subscription.billing_cycle = cycle
+            recalculate = True
     if "start_date" in data:
         start_date = parse_date(data["start_date"], "start_date")
         if start_date != subscription.start_date:
@@ -113,13 +120,11 @@ def _apply_update(subscription, data):
     if recalculate:
         if subscription.renewals:
             raise APIError(
-                "Plan and start date cannot be changed after a subscription has been renewed. "
-                "Choose a new plan when renewing instead.",
+                "Billing cycle and start date cannot be changed after a subscription has been "
+                "renewed. Choose a new billing cycle when renewing instead.",
                 400,
             )
-        subscription.expiry_date = calculate_expiry(
-            subscription.start_date, subscription.plan.billing_cycle
-        )
+        subscription.expiry_date = calculate_expiry(subscription.start_date, subscription.billing_cycle)
 
     if "amount" in data:
         subscription.amount = parse_amount(data["amount"], "amount", allow_zero=True)
@@ -143,33 +148,26 @@ def renew_subscription(subscription, data, user=None):
     Active subscriptions extend from their current expiry date so no paid time
     is lost; expired ones restart from today. A renewal history row and a new
     payment record are always created; earlier records are never modified.
+    The billing cycle and amount can be changed at renewal time.
     """
-    from ..models import SubscriptionPlan
-    from ..utils import get_or_404
-
     if subscription.status == "cancelled":
         raise APIError(
             "Cancelled subscriptions cannot be renewed. Create a new subscription instead.", 400
         )
 
-    plan = subscription.plan
-    if data.get("plan_id") not in (None, ""):
-        plan = get_or_404(SubscriptionPlan, int(data["plan_id"]), "Plan")
-    if plan.status != "active":
-        raise APIError("The selected plan is inactive. Choose an active plan to renew.", 400)
-    if plan.id != subscription.plan_id:
-        _ensure_no_duplicate(subscription.customer_id, plan.id, exclude_id=subscription.id)
-
+    cycle = subscription.billing_cycle
+    if data.get("billing_cycle") not in (None, ""):
+        cycle = _billing_cycle(data["billing_cycle"])
     amount = parse_amount(data.get("amount"), "amount", allow_zero=True, required=False)
     if amount is None:
-        amount = subscription.amount if plan.id == subscription.plan_id else plan.price
+        amount = subscription.amount
 
     previous_expiry = subscription.expiry_date
     current_day = today()
     period_start = previous_expiry if previous_expiry >= current_day else current_day
-    new_expiry = calculate_expiry(period_start, plan.billing_cycle)
+    new_expiry = calculate_expiry(period_start, cycle)
 
-    subscription.plan = plan
+    subscription.billing_cycle = cycle
     subscription.amount = amount
     subscription.expiry_date = new_expiry
     subscription.last_renewed_at = utcnow()
@@ -183,7 +181,8 @@ def renew_subscription(subscription, data, user=None):
 
     renewal = RenewalHistory(
         subscription=subscription,
-        plan=plan,
+        service_name=subscription.service_name,
+        billing_cycle=cycle,
         payment=payment,
         previous_expiry_date=previous_expiry,
         period_start=period_start,

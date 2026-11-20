@@ -5,7 +5,7 @@ from flask import current_app
 from sqlalchemy import func
 
 from ..extensions import db
-from ..models import Customer, Payment, RenewalHistory, Subscription, SubscriptionPlan
+from ..models import Customer, Payment, RenewalHistory, Subscription
 from .dates import add_months, month_range, today
 from .subscriptions import status_condition
 
@@ -73,7 +73,7 @@ def recent_activity(limit=8):
         events.append(
             {
                 "type": "subscription_created",
-                "title": f"New subscription · {sub.plan.name}",
+                "title": f"New subscription · {sub.service_name}",
                 "description": sub.customer.full_name,
                 "subscription_id": sub.id,
                 "amount": _round(sub.amount),
@@ -84,7 +84,7 @@ def recent_activity(limit=8):
         events.append(
             {
                 "type": "renewal",
-                "title": f"Renewed · {renewal.plan.name}",
+                "title": f"Renewed · {renewal.service_name}",
                 "description": renewal.subscription.customer.full_name,
                 "subscription_id": renewal.subscription_id,
                 "amount": _round(renewal.amount),
@@ -114,7 +114,7 @@ def recent_activity(limit=8):
         events.append(
             {
                 "type": "cancelled",
-                "title": f"Cancelled · {sub.plan.name}",
+                "title": f"Cancelled · {sub.service_name}",
                 "description": sub.customer.full_name,
                 "subscription_id": sub.id,
                 "amount": None,
@@ -211,43 +211,37 @@ def report_summary(start, end):
     )
     pending = [p for p in pending_rows if p.status == "pending"]
 
-    plan_rows = (
-        db.session.query(
-            SubscriptionPlan,
-            func.count(Subscription.id),
-        )
-        .outerjoin(
-            Subscription,
-            (Subscription.plan_id == SubscriptionPlan.id)
-            & (Subscription.start_date <= end),
-        )
-        .group_by(SubscriptionPlan.id)
+    # Popularity by service name (grouped case-insensitively).
+    key = func.lower(Subscription.service_name)
+    service_rows = (
+        db.session.query(key, func.min(Subscription.service_name), func.count(Subscription.id))
+        .filter(Subscription.start_date <= end)
+        .group_by(key)
         .all()
     )
-    plan_revenue = dict(
-        db.session.query(Subscription.plan_id, func.sum(Payment.amount))
+    service_revenue = dict(
+        db.session.query(key, func.sum(Payment.amount))
+        .select_from(Subscription)
         .join(Payment, Payment.subscription_id == Subscription.id)
         .filter(Payment.status == "paid", Payment.paid_on >= start, Payment.paid_on <= end)
-        .group_by(Subscription.plan_id)
+        .group_by(key)
         .all()
     )
-    active_by_plan = dict(
-        db.session.query(Subscription.plan_id, func.count(Subscription.id))
+    active_by_service = dict(
+        db.session.query(key, func.count(Subscription.id))
         .filter(status_condition("current"))
-        .group_by(Subscription.plan_id)
+        .group_by(key)
         .all()
     )
-    plan_popularity = sorted(
+    service_popularity = sorted(
         (
             {
-                "plan_id": plan.id,
-                "plan": plan.name,
-                "billing_cycle": plan.billing_cycle,
+                "service": name,
                 "subscriptions": total,
-                "active": active_by_plan.get(plan.id, 0),
-                "revenue": _round(plan_revenue.get(plan.id)),
+                "active": active_by_service.get(lowered, 0),
+                "revenue": _round(service_revenue.get(lowered)),
             }
-            for plan, total in plan_rows
+            for lowered, name, total in service_rows
         ),
         key=lambda row: (row["active"], row["subscriptions"]),
         reverse=True,
@@ -327,7 +321,7 @@ def report_summary(start, end):
         },
         "monthly_revenue": revenue,
         "pending_payments": [p.to_dict() for p in pending_rows[:50]],
-        "plan_popularity": plan_popularity,
+        "service_popularity": service_popularity,
         "customer_distribution": [{"label": k, "customers": v} for k, v in buckets.items()],
         "renewal_trends": trends,
     }

@@ -95,7 +95,7 @@ export default function CustomerDetail() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Plan</th>
+                    <th>Service</th>
                     <th className="hide-sm">Start</th>
                     <th>Expiry</th>
                     <th className="num">Amount</th>
@@ -107,7 +107,7 @@ export default function CustomerDetail() {
                     <tr key={s.id} className="row-link" onClick={() => navigate(`/subscriptions/${s.id}`)}>
                       <td>
                         <div className="cell-main">
-                          <strong>{s.plan.name}</strong>
+                          <strong>{s.service_name}</strong>
                           <span className="muted">
                             {s.code} · {s.renewal_count} renewal{s.renewal_count === 1 ? '' : 's'}
                           </span>
@@ -125,7 +125,7 @@ export default function CustomerDetail() {
               </table>
             </div>
           ) : (
-            <EmptyState icon="card" title="No subscriptions" message="This customer has not subscribed to a plan yet." />
+            <EmptyState icon="card" title="No subscriptions" message="This customer has no subscriptions yet." />
           )}
         </Card>
       </div>
@@ -137,7 +137,7 @@ export default function CustomerDetail() {
               <thead>
                 <tr>
                   <th>Payment</th>
-                  <th>Plan</th>
+                  <th>Service</th>
                   <th className="hide-sm">Due</th>
                   <th className="hide-sm">Paid on</th>
                   <th className="hide-sm">Method</th>
@@ -149,7 +149,7 @@ export default function CustomerDetail() {
                 {c.payments.map((p) => (
                   <tr key={p.id}>
                     <td>{p.code}</td>
-                    <td>{p.subscription.plan.name}</td>
+                    <td>{p.subscription.service_name}</td>
                     <td className="hide-sm">{formatDate(p.due_date)}</td>
                     <td className="hide-sm">{p.paid_on ? formatDate(p.paid_on) : '—'}</td>
                     <td className="hide-sm">{METHOD_LABELS[p.method] || '—'}</td>

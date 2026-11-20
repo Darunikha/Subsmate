@@ -9,7 +9,6 @@ from ..models import (
     ROLE_STAFF,
     Customer,
     Subscription,
-    SubscriptionPlan,
 )
 from ..services import subscriptions as service
 from ..utils import APIError, get_json, get_or_404, paginate, require_fields
@@ -36,14 +35,12 @@ def get_accessible_subscription(subscription_id):
 @bp.get("")
 @login_required
 def list_subscriptions():
-    query = scoped_query().join(Customer).join(SubscriptionPlan)
+    query = scoped_query().join(Customer)
     args = request.args
     if args.get("status"):
         query = query.filter(service.status_condition(args["status"]))
     if args.get("customer_id"):
         query = query.filter(Subscription.customer_id == int(args["customer_id"]))
-    if args.get("plan_id"):
-        query = query.filter(Subscription.plan_id == int(args["plan_id"]))
     if args.get("payment_status"):
         query = query.filter(Subscription.payment_status == args["payment_status"])
     term = args.get("q", "").strip()
@@ -52,7 +49,7 @@ def list_subscriptions():
         conditions = [
             Customer.full_name.ilike(like),
             Customer.email.ilike(like),
-            SubscriptionPlan.name.ilike(like),
+            Subscription.service_name.ilike(like),
         ]
         digits = term.upper().removeprefix("SUB-").lstrip("0")
         if digits.isdigit():
@@ -70,10 +67,9 @@ def list_subscriptions():
 @roles_required(ROLE_ADMIN, ROLE_STAFF)
 def create_subscription():
     data = get_json()
-    require_fields(data, "customer_id", "plan_id")
+    require_fields(data, "customer_id", "service_name", "billing_cycle", "amount")
     customer = get_or_404(Customer, int(data["customer_id"]), "Customer")
-    plan = get_or_404(SubscriptionPlan, int(data["plan_id"]), "Plan")
-    sub = service.create_subscription(customer, plan, data, current_user())
+    sub = service.create_subscription(customer, data, current_user())
     db.session.commit()
     return jsonify(sub.to_dict(detail=True)), 201
 

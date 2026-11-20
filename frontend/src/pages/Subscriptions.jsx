@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SubscriptionForm } from '../components/forms';
 import {
@@ -13,7 +13,6 @@ import {
   StatusBadge,
   Tabs,
 } from '../components/ui';
-import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useApi, useDebounced } from '../lib/hooks';
 import { daysLabel, formatDate, money } from '../lib/format';
@@ -31,18 +30,12 @@ export default function Subscriptions() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || '';
-  const planId = params.get('plan_id') || '';
   const [term, setTerm] = useState('');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
-  const [plans, setPlans] = useState([]);
   const q = useDebounced(term);
   const isCustomer = user.role === 'customer';
-  const { data, error, loading, reload } = useApi('/subscriptions', { status, plan_id: planId, q, page });
-
-  useEffect(() => {
-    if (!isCustomer) api.get('/plans').then((d) => setPlans(d.items)).catch(() => {});
-  }, [isCustomer]);
+  const { data, error, loading, reload } = useApi('/subscriptions', { status, q, page });
 
   const setFilter = (key, value) => {
     const next = new URLSearchParams(params);
@@ -56,7 +49,7 @@ export default function Subscriptions() {
     <>
       <PageHeader
         title={isCustomer ? 'My Subscriptions' : 'Subscriptions'}
-        subtitle={isCustomer ? 'Your plans, expiry dates and renewal status.' : 'Create, track and manage customer subscriptions.'}
+        subtitle={isCustomer ? 'Your subscriptions, expiry dates and renewal status.' : 'Create, track and manage customer subscriptions.'}
         actions={
           can('manageSubscriptions') && (
             <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
@@ -69,23 +62,13 @@ export default function Subscriptions() {
         <div className="toolbar">
           <Tabs value={status} onChange={(v) => setFilter('status', v)} tabs={STATUS_TABS} />
           <div className="toolbar-right">
-            {!isCustomer && (
-              <select className="select-sm" value={planId} onChange={(e) => setFilter('plan_id', e.target.value)} aria-label="Filter by plan">
-                <option value="">All plans</option>
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            )}
             <SearchInput
               value={term}
               onChange={(v) => {
                 setTerm(v);
                 setPage(1);
               }}
-              placeholder={isCustomer ? 'Search plans' : 'Search customer, plan or ID'}
+              placeholder={isCustomer ? 'Search services' : 'Search customer, service or ID'}
             />
           </div>
         </div>
@@ -114,7 +97,7 @@ export default function Subscriptions() {
                   <tr key={s.id} className="row-link" onClick={() => navigate(`/subscriptions/${s.id}`)}>
                     <td>
                       <div className="cell-main">
-                        <strong>{s.plan.name}</strong>
+                        <strong>{s.service_name}</strong>
                         <span className="muted">{s.code}</span>
                       </div>
                     </td>

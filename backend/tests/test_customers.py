@@ -85,21 +85,21 @@ def test_delete_customer_without_history(client, auth, app):
     assert client.get(f"/api/customers/{customer_id}", headers=auth("admin")).status_code == 404
 
 
-def test_delete_customer_with_subscriptions_is_blocked(client, auth, customer, plans):
+def test_delete_customer_with_subscriptions_is_blocked(client, auth, customer, services):
     client.post(
         "/api/subscriptions",
         headers=auth("staff"),
-        json={"customer_id": customer.id, "plan_id": plans["monthly"].id},
+        json={"customer_id": customer.id, **services["monthly"].payload()},
     )
     response = client.delete(f"/api/customers/{customer.id}", headers=auth("admin"))
     assert response.status_code == 409
 
 
-def test_customer_subscription_history_in_detail(client, auth, customer, plans):
+def test_customer_subscription_history_in_detail(client, auth, customer, services):
     client.post(
         "/api/subscriptions",
         headers=auth("staff"),
-        json={"customer_id": customer.id, "plan_id": plans["monthly"].id, "start_date": "2025-01-01"},
+        json={"customer_id": customer.id, **services["monthly"].payload(start_date="2025-01-01")},
     )
     detail = client.get(f"/api/customers/{customer.id}", headers=auth("admin")).get_json()
     assert len(detail["subscriptions"]) == 1

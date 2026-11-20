@@ -213,7 +213,7 @@ function CustomerDashboard({ data, user }) {
         <Stat icon="calendar" label="Next renewal" value={next ? formatDate(next.expiry_date) : '—'} to={next ? `/subscriptions/${next.id}` : undefined}>
           {next ? (
             <span className={`days days-${next.status}`}>
-              {next.plan.name} · {daysLabel(next.days_until_expiry)}
+              {next.service_name} · {daysLabel(next.days_until_expiry)}
             </span>
           ) : (
             <span className="muted">No active subscriptions</span>
@@ -235,7 +235,7 @@ function CustomerDashboard({ data, user }) {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Plan</th>
+                    <th>Service</th>
                     <th>Expiry</th>
                     <th className="num">Amount</th>
                     <th>Status</th>
@@ -246,7 +246,7 @@ function CustomerDashboard({ data, user }) {
                     <tr key={s.id}>
                       <td>
                         <Link to={`/subscriptions/${s.id}`} className="cell-main">
-                          <strong>{s.plan.name}</strong>
+                          <strong>{s.service_name}</strong>
                           <span className="muted">{s.code}</span>
                         </Link>
                       </td>
@@ -272,7 +272,7 @@ function CustomerDashboard({ data, user }) {
                   <span>
                     <strong>{money(p.amount)}</strong>
                     <small className="muted">
-                      {p.subscription.plan.name} · {formatDate(p.paid_on || p.due_date)}
+                      {p.subscription.service_name} · {formatDate(p.paid_on || p.due_date)}
                     </small>
                   </span>
                   <StatusBadge status={p.status} />

@@ -14,8 +14,6 @@ export const PERMISSIONS = {
   viewCustomers: ['admin', 'staff'],
   manageCustomers: ['admin', 'staff'],
   deleteCustomers: ['admin'],
-  viewPlans: ['admin', 'staff'],
-  managePlans: ['admin'],
   manageSubscriptions: ['admin', 'staff'],
   renewSubscriptions: ['admin', 'staff'],
   viewPayments: ['admin', 'staff', 'customer'],

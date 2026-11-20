@@ -8,14 +8,6 @@ function FormError({ message }) {
   return message ? <div className="form-error">{message}</div> : null;
 }
 
-function useActivePlans() {
-  const [plans, setPlans] = useState([]);
-  useEffect(() => {
-    api.get('/plans', { status: 'active' }).then((d) => setPlans(d.items)).catch(() => {});
-  }, []);
-  return plans;
-}
-
 function PaymentFields({ form, prefix = 'payment_', showStatusHint }) {
   const { values, set } = form;
   return (
@@ -121,94 +113,15 @@ export function CustomerForm({ customer, onClose, onSaved }) {
   );
 }
 
-/* ------------------------------------------------------------------ plan */
-export function PlanForm({ plan, onClose, onSaved }) {
-  const toast = useToast();
-  const form = useForm({
-    name: plan?.name || '',
-    description: plan?.description || '',
-    price: plan?.price ?? '',
-    billing_cycle: plan?.billing_cycle || 'monthly',
-    features: (plan?.features || []).join('\n'),
-    status: plan?.status || 'active',
-  });
-  const { values, set, errors } = form;
-  const cycleLocked = Boolean(plan?.total_subscriptions);
-
-  const save = (e) => {
-    e.preventDefault();
-    form.submit(async (v) => {
-      const body = { ...v, features: v.features.split('\n') };
-      const saved = plan ? await api.put(`/plans/${plan.id}`, body) : await api.post('/plans', body);
-      toast.success(plan ? 'Plan updated.' : 'Plan created.');
-      onSaved(saved);
-      return true;
-    });
-  };
-
-  return (
-    <Modal
-      title={plan ? 'Edit plan' : 'New subscription plan'}
-      onClose={onClose}
-      footer={
-        <>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit" form="plan-form" loading={form.submitting}>
-            {plan ? 'Save changes' : 'Create plan'}
-          </Button>
-        </>
-      }
-    >
-      <form id="plan-form" className="form-grid" onSubmit={save} noValidate>
-        <FormError message={form.formError} />
-        <Field label="Plan name" error={errors.name} full>
-          <input value={values.name} onChange={set('name')} maxLength={120} />
-        </Field>
-        <Field label="Price (USD)" error={errors.price}>
-          <input type="number" min="0" step="0.01" value={values.price} onChange={set('price')} />
-        </Field>
-        <Field
-          label="Billing cycle"
-          error={errors.billing_cycle}
-          hint={cycleLocked ? 'Locked: this plan already has subscriptions.' : undefined}
-        >
-          <select value={values.billing_cycle} onChange={set('billing_cycle')} disabled={cycleLocked}>
-            {Object.entries(CYCLE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Description" error={errors.description} full>
-          <textarea rows={2} value={values.description} onChange={set('description')} />
-        </Field>
-        <Field label="Features" error={errors.features} hint="One feature per line." full>
-          <textarea rows={4} value={values.features} onChange={set('features')} />
-        </Field>
-        <Field label="Status" error={errors.status}>
-          <select value={values.status} onChange={set('status')}>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </Field>
-        {plan && (
-          <p className="field-hint field-full">Price changes apply to new subscriptions; existing ones keep their agreed amount.</p>
-        )}
-      </form>
-    </Modal>
-  );
-}
-
 /* ------------------------------------------------------------------ subscription */
 export function SubscriptionForm({ subscription, customerId, onClose, onSaved }) {
   const toast = useToast();
-  const plans = useActivePlans();
   const [customers, setCustomers] = useState([]);
   const editing = Boolean(subscription);
   const form = useForm({
     customer_id: subscription?.customer.id || customerId || '',
-    plan_id: subscription?.plan.id || '',
+    service_name: subscription?.service_name || '',
+    billing_cycle: subscription?.billing_cycle || 'monthly',
     start_date: subscription?.start_date || todayISO(),
     amount: subscription?.amount ?? '',
     notes: subscription?.notes || '',
@@ -216,7 +129,7 @@ export function SubscriptionForm({ subscription, customerId, onClose, onSaved })
     payment_method: '',
     payment_reference: '',
   });
-  const { values, set, errors, setValues } = form;
+  const { values, set, errors } = form;
 
   useEffect(() => {
     if (editing) return;
@@ -226,28 +139,23 @@ export function SubscriptionForm({ subscription, customerId, onClose, onSaved })
       .catch(() => {});
   }, [editing]);
 
-  const plan = plans.find((p) => String(p.id) === String(values.plan_id));
-  const expiry = plan ? calculateExpiry(values.start_date, plan.billing_cycle) : null;
+  const expiry = calculateExpiry(values.start_date, values.billing_cycle);
   const locked = editing && subscription.renewal_count > 0;
-
-  const choosePlan = (event) => {
-    const chosen = plans.find((p) => String(p.id) === event.target.value);
-    setValues((v) => ({ ...v, plan_id: event.target.value, amount: chosen ? chosen.price : v.amount }));
-  };
 
   const save = (e) => {
     e.preventDefault();
     form.submit(async (v) => {
       let saved;
       if (editing) {
-        const body = { amount: v.amount, notes: v.notes };
-        if (!locked) Object.assign(body, { plan_id: v.plan_id, start_date: v.start_date });
+        const body = { service_name: v.service_name, amount: v.amount, notes: v.notes };
+        if (!locked) Object.assign(body, { billing_cycle: v.billing_cycle, start_date: v.start_date });
         saved = await api.put(`/subscriptions/${subscription.id}`, body);
         toast.success('Subscription updated.');
       } else {
         saved = await api.post('/subscriptions', {
           customer_id: v.customer_id,
-          plan_id: v.plan_id,
+          service_name: v.service_name,
+          billing_cycle: v.billing_cycle,
           start_date: v.start_date,
           amount: v.amount,
           notes: v.notes,
@@ -287,30 +195,31 @@ export function SubscriptionForm({ subscription, customerId, onClose, onSaved })
             </select>
           </Field>
         )}
+        <Field label="Service name" error={errors.service_name} hint="What the customer is subscribing to, e.g. Monthly gym pass." full>
+          <input value={values.service_name} onChange={set('service_name')} maxLength={120} placeholder="Monthly gym pass" />
+        </Field>
         <Field
-          label="Plan"
-          error={errors.plan_id}
-          full
-          hint={locked ? 'Plan changes after a renewal are made when renewing.' : undefined}
+          label="Billing cycle"
+          error={errors.billing_cycle}
+          hint={locked ? 'Locked after a renewal. Change it when renewing.' : undefined}
         >
-          <select value={values.plan_id} onChange={choosePlan} disabled={locked}>
-            <option value="">Select a plan…</option>
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {money(p.price)} / {CYCLE_LABELS[p.billing_cycle].toLowerCase()}
+          <select value={values.billing_cycle} onChange={set('billing_cycle')} disabled={locked}>
+            {Object.entries(CYCLE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </select>
         </Field>
+        <Field label="Amount (USD)" error={errors.amount}>
+          <input type="number" min="0" step="0.01" value={values.amount} onChange={set('amount')} />
+        </Field>
         <Field label="Start date" error={errors.start_date}>
           <input type="date" value={values.start_date} onChange={set('start_date')} disabled={locked} />
         </Field>
-        <Field label="Amount (USD)" error={errors.amount} hint="Defaults to the plan price.">
-          <input type="number" min="0" step="0.01" value={values.amount} onChange={set('amount')} />
-        </Field>
         {expiry && !locked && (
-          <div className="info-strip field-full">
-            <span>Expiry date (calculated)</span>
+          <div className="info-strip" style={{ alignSelf: 'end' }}>
+            <span>Expires</span>
             <strong>{formatDate(expiry)}</strong>
           </div>
         )}
@@ -332,33 +241,24 @@ export function SubscriptionForm({ subscription, customerId, onClose, onSaved })
 
 export function RenewModal({ subscription, onClose, onSaved }) {
   const toast = useToast();
-  const plans = useActivePlans();
   const form = useForm({
-    plan_id: String(subscription.plan.id),
+    billing_cycle: subscription.billing_cycle,
     amount: subscription.amount,
     payment_status: 'pending',
     payment_method: '',
     payment_reference: '',
     notes: '',
   });
-  const { values, set, errors, setValues } = form;
-  const plan = plans.find((p) => String(p.id) === values.plan_id);
+  const { values, set, errors } = form;
   const today = todayISO();
   const periodStart = subscription.expiry_date >= today ? subscription.expiry_date : today;
-  const newExpiry = calculateExpiry(periodStart, plan?.billing_cycle || subscription.plan.billing_cycle);
-  const currentPlanInactive = plans.length > 0 && !plans.some((p) => p.id === subscription.plan.id);
-
-  const choosePlan = (event) => {
-    const chosen = plans.find((p) => String(p.id) === event.target.value);
-    const amount = chosen && chosen.id !== subscription.plan.id ? chosen.price : subscription.amount;
-    setValues((v) => ({ ...v, plan_id: event.target.value, amount }));
-  };
+  const newExpiry = calculateExpiry(periodStart, values.billing_cycle);
 
   const save = (e) => {
     e.preventDefault();
     form.submit(async (v) => {
       const result = await api.post(`/subscriptions/${subscription.id}/renew`, {
-        plan_id: v.plan_id,
+        billing_cycle: v.billing_cycle,
         amount: v.amount,
         notes: v.notes,
         payment: { status: v.payment_status, method: v.payment_method, reference: v.payment_reference },
@@ -372,7 +272,7 @@ export function RenewModal({ subscription, onClose, onSaved }) {
   return (
     <Modal
       title={`Renew ${subscription.code}`}
-      subtitle={`${subscription.customer.full_name} · currently expires ${formatDate(subscription.expiry_date)}`}
+      subtitle={`${subscription.customer.full_name} · ${subscription.service_name} · expires ${formatDate(subscription.expiry_date)}`}
       onClose={onClose}
       footer={
         <>
@@ -385,18 +285,17 @@ export function RenewModal({ subscription, onClose, onSaved }) {
     >
       <form id="renew-form" className="form-grid" onSubmit={save} noValidate>
         <FormError message={form.formError} />
-        {currentPlanInactive && (
-          <div className="form-warning field-full">The current plan is inactive. Choose an active plan to renew.</div>
-        )}
-        <Field label="Plan" error={errors.plan_id} full>
-          <select value={values.plan_id} onChange={choosePlan}>
-            {currentPlanInactive && <option value={subscription.plan.id}>{subscription.plan.name} (inactive)</option>}
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {money(p.price)} / {CYCLE_LABELS[p.billing_cycle].toLowerCase()}
+        <Field label="Billing cycle" error={errors.billing_cycle}>
+          <select value={values.billing_cycle} onChange={set('billing_cycle')}>
+            {Object.entries(CYCLE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </select>
+        </Field>
+        <Field label="Amount (USD)" error={errors.amount}>
+          <input type="number" min="0" step="0.01" value={values.amount} onChange={set('amount')} />
         </Field>
         <div className="renew-preview field-full">
           <div>
@@ -408,9 +307,6 @@ export function RenewModal({ subscription, onClose, onSaved }) {
             <strong>{formatDate(newExpiry)}</strong>
           </div>
         </div>
-        <Field label="Amount (USD)" error={errors.amount}>
-          <input type="number" min="0" step="0.01" value={values.amount} onChange={set('amount')} />
-        </Field>
         <PaymentFields form={form} />
         <Field label="Payment reference" full>
           <input value={values.payment_reference} onChange={set('payment_reference')} placeholder="Optional" />
@@ -455,7 +351,7 @@ export function CancelModal({ subscription, onClose, onSaved }) {
       <form id="cancel-form" className="form-grid" onSubmit={save}>
         <FormError message={form.formError} />
         <p className="confirm-message field-full">
-          {subscription.customer.full_name}'s {subscription.plan.name} subscription will stop renewing. Its payment and
+          {subscription.customer.full_name}'s {subscription.service_name} subscription will stop renewing. Its payment and
           renewal history is kept.
         </p>
         <Field label="Reason (optional)" full>
@@ -529,7 +425,7 @@ export function PaymentForm({ subscription, onClose, onSaved }) {
               <option value="">Select a subscription…</option>
               {subs.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.code} · {s.customer.full_name} — {s.plan.name}
+                  {s.code} · {s.customer.full_name} — {s.service_name}
                 </option>
               ))}
             </select>
@@ -586,7 +482,7 @@ export function PaymentUpdateModal({ payment, onClose, onSaved }) {
   });
   const { values, set, errors } = form;
   const subtitle = useMemo(
-    () => (payment.subscription ? `${payment.subscription.customer.full_name} · ${payment.subscription.plan.name}` : undefined),
+    () => (payment.subscription ? `${payment.subscription.customer.full_name} · ${payment.subscription.service_name}` : undefined),
     [payment],
   );
 

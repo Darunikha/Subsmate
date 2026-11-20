@@ -16,7 +16,6 @@ from ..models import (
     Payment,
     RenewalHistory,
     Subscription,
-    SubscriptionPlan,
 )
 from ..services import analytics
 from ..services.dates import add_months, today
@@ -93,12 +92,12 @@ def export_report(report):
         rows = [
             (
                 p.code, p.subscription.code, p.subscription.customer.full_name,
-                p.subscription.plan.name, f"{p.amount:.2f}", p.status, p.method or "",
+                p.subscription.service_name, f"{p.amount:.2f}", p.status, p.method or "",
                 _d(p.due_date), _d(p.paid_on), p.reference or "",
             )
             for p in payments
         ]
-        header = ["Payment", "Subscription", "Customer", "Plan", "Amount", "Status", "Method",
+        header = ["Payment", "Subscription", "Customer", "Service", "Amount", "Status", "Method",
                   "Due date", "Paid on", "Reference"]
         return _csv_response(f"payments_{stamp}.csv", header, rows)
 
@@ -107,12 +106,12 @@ def export_report(report):
         rows = [
             (
                 p.code, p.subscription.customer.full_name, p.subscription.customer.email,
-                p.subscription.plan.name, f"{p.amount:.2f}", _d(p.due_date),
+                p.subscription.service_name, f"{p.amount:.2f}", _d(p.due_date),
                 "yes" if p.is_overdue else "no",
             )
             for p in payments
         ]
-        header = ["Payment", "Customer", "Email", "Plan", "Amount", "Due date", "Overdue"]
+        header = ["Payment", "Customer", "Email", "Service", "Amount", "Due date", "Overdue"]
         return _csv_response(f"pending_payments_{today().isoformat()}.csv", header, rows)
 
     if report == "subscriptions":
@@ -123,24 +122,24 @@ def export_report(report):
         )
         rows = [
             (
-                s.code, s.customer.full_name, s.customer.email, s.plan.name, s.plan.billing_cycle,
+                s.code, s.customer.full_name, s.customer.email, s.service_name, s.billing_cycle,
                 _d(s.start_date), _d(s.expiry_date), f"{s.amount:.2f}", s.payment_status,
                 s.effective_status, len(s.renewals),
             )
             for s in subs
         ]
-        header = ["Subscription", "Customer", "Email", "Plan", "Billing cycle", "Start date",
+        header = ["Subscription", "Customer", "Email", "Service", "Billing cycle", "Start date",
                   "Expiry date", "Amount", "Payment status", "Status", "Renewals"]
         return _csv_response(f"subscriptions_{stamp}.csv", header, rows)
 
-    if report == "plans":
+    if report == "services":
         summary = analytics.report_summary(start, end)
         rows = [
-            (r["plan"], r["billing_cycle"], r["active"], r["subscriptions"], f'{r["revenue"]:.2f}')
-            for r in summary["plan_popularity"]
+            (r["service"], r["active"], r["subscriptions"], f'{r["revenue"]:.2f}')
+            for r in summary["service_popularity"]
         ]
-        header = ["Plan", "Billing cycle", "Active subscriptions", "Total subscriptions", "Revenue in range"]
-        return _csv_response(f"plan_popularity_{stamp}.csv", header, rows)
+        header = ["Service", "Active subscriptions", "Total subscriptions", "Revenue in range"]
+        return _csv_response(f"service_popularity_{stamp}.csv", header, rows)
 
     if report == "renewals":
         renewals = (
@@ -154,13 +153,13 @@ def export_report(report):
         rows = [
             (
                 r.renewed_at.strftime("%Y-%m-%d %H:%M"), r.subscription.code,
-                r.subscription.customer.full_name, r.plan.name, _d(r.previous_expiry_date),
+                r.subscription.customer.full_name, r.service_name, _d(r.previous_expiry_date),
                 _d(r.new_expiry_date), f"{r.amount:.2f}", r.payment.status if r.payment else "",
                 r.renewed_by.name if r.renewed_by else "",
             )
             for r in renewals
         ]
-        header = ["Renewed at", "Subscription", "Customer", "Plan", "Previous expiry", "New expiry",
+        header = ["Renewed at", "Subscription", "Customer", "Service", "Previous expiry", "New expiry",
                   "Amount", "Payment status", "Renewed by"]
         return _csv_response(f"renewals_{stamp}.csv", header, rows)
 
@@ -218,27 +217,24 @@ def mark_all_read():
 def search():
     term = request.args.get("q", "").strip()
     if len(term) < 2:
-        return jsonify({"customers": [], "subscriptions": [], "plans": []})
+        return jsonify({"customers": [], "subscriptions": []})
     like = f"%{term}%"
     user = current_user()
 
-    subs = Subscription.query.join(Customer).join(SubscriptionPlan).filter(
-        or_(Customer.full_name.ilike(like), Customer.email.ilike(like), SubscriptionPlan.name.ilike(like))
+    subs = Subscription.query.join(Customer).filter(
+        or_(Customer.full_name.ilike(like), Customer.email.ilike(like), Subscription.service_name.ilike(like))
     )
     if user.role == ROLE_CUSTOMER:
         subs = subs.filter(Subscription.customer_id == user.customer_id)
     result = {"subscriptions": [s.summary() for s in subs.order_by(Subscription.id.desc()).limit(5)]}
 
     if user.role == ROLE_CUSTOMER:
-        # Customers have no customers or plans pages, so those results would be dead ends.
+        # Customers have no customers page, so those results would be dead ends.
         result["customers"] = []
-        result["plans"] = []
         return jsonify(result)
 
     customers = Customer.query.filter(
         or_(Customer.full_name.ilike(like), Customer.email.ilike(like), Customer.phone.ilike(like))
     ).limit(5)
     result["customers"] = [c.to_dict() for c in customers]
-    plans = SubscriptionPlan.query.filter(SubscriptionPlan.name.ilike(like)).limit(5)
-    result["plans"] = [p.to_dict() for p in plans]
     return jsonify(result)

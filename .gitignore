@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+backend/instance/
+
+# Node
+node_modules/
+dist/
+
+# Environment & secrets
+.env
+*.tfvars
+!*.tfvars.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

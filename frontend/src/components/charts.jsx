@@ -17,7 +17,7 @@ import { formatMonth, formatMonthYear, money, moneyCompact } from '../lib/format
 // Validated categorical order (CVD-safe on the light surface).
 // Two-colour palette: every series is Midnight Blue; lines are told apart by dash pattern and marker.
 const NAVY = '#0F3C65';
-const CREAM = '#FFF2BA';
+const WHITE = '#FFFFFF';
 export const SERIES = [NAVY, NAVY, NAVY];
 const AXIS = { fontSize: 12, fill: 'rgba(15, 60, 101, 0.72)' };
 const GRID = 'rgba(15, 60, 101, 0.14)';
@@ -60,7 +60,7 @@ export function RevenueArea({ data, height = 240 }) {
           strokeWidth={2}
           fill="url(#revenueFill)"
           dot={false}
-          activeDot={{ r: 5, strokeWidth: 2, stroke: CREAM }}
+          activeDot={{ r: 5, strokeWidth: 2, stroke: WHITE }}
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -91,7 +91,7 @@ export function TrendLines({ data, height = 260 }) {
         <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(15, 60, 101, 0.3)' }} />
         <Legend iconType="plainline" iconSize={22} wrapperStyle={{ fontSize: 12, paddingTop: 8, color: NAVY }} />
         <Line isAnimationActive={false} type="linear" dataKey="new_subscriptions" name="New" stroke={SERIES[0]} strokeWidth={2.5} dot={{ r: 3.5, fill: NAVY }} activeDot={{ r: 5 }} />
-        <Line isAnimationActive={false} type="linear" dataKey="renewals" name="Renewals" stroke={SERIES[1]} strokeWidth={2.5} strokeDasharray="9 5" dot={{ r: 3.5, fill: CREAM, stroke: NAVY, strokeWidth: 2 }} activeDot={{ r: 5 }} />
+        <Line isAnimationActive={false} type="linear" dataKey="renewals" name="Renewals" stroke={SERIES[1]} strokeWidth={2.5} strokeDasharray="9 5" dot={{ r: 3.5, fill: WHITE, stroke: NAVY, strokeWidth: 2 }} activeDot={{ r: 5 }} />
         <Line isAnimationActive={false} type="linear" dataKey="cancellations" name="Cancellations" stroke={SERIES[2]} strokeWidth={2} strokeDasharray="2 5" strokeLinecap="round" dot={{ r: 2.5, fill: NAVY }} activeDot={{ r: 5 }} />
       </LineChart>
     </ResponsiveContainer>

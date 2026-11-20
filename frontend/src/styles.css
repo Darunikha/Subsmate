@@ -1,35 +1,36 @@
 /* Subsmate — minimal SaaS styling. Tokens first, then layout, components, pages. */
 :root {
-  /* The whole app uses two colours: Buttermilk and Midnight Blue.
-     Every other shade below is a mix of those two. */
+  /* Brand colours: Midnight Blue (text, sidebar, buttons) and Buttermilk (highlights) on a white page.
+     Every other shade below is a mix of these. */
   --buttermilk: #FFF2BA;
   --midnight: #0F3C65;
+  --white: #ffffff;
 
-  --bg: var(--buttermilk);
-  --surface: var(--buttermilk);
-  --surface-2: color-mix(in srgb, var(--midnight) 5%, var(--buttermilk));
-  --border: color-mix(in srgb, var(--midnight) 16%, var(--buttermilk));
-  --border-strong: color-mix(in srgb, var(--midnight) 32%, var(--buttermilk));
+  --bg: var(--white);
+  --surface: var(--white);
+  --surface-2: color-mix(in srgb, var(--buttermilk) 38%, var(--white));
+  --border: color-mix(in srgb, var(--midnight) 14%, var(--white));
+  --border-strong: color-mix(in srgb, var(--midnight) 30%, var(--white));
   --text: var(--midnight);
-  --text-2: color-mix(in srgb, var(--midnight) 86%, var(--buttermilk));
-  --muted: color-mix(in srgb, var(--midnight) 68%, var(--buttermilk));
+  --text-2: color-mix(in srgb, var(--midnight) 86%, var(--white));
+  --muted: color-mix(in srgb, var(--midnight) 64%, var(--white));
   --accent: var(--midnight);
   --accent-strong: var(--midnight);
-  --accent-soft: color-mix(in srgb, var(--midnight) 10%, var(--buttermilk));
-  --accent-ring: color-mix(in srgb, var(--midnight) 30%, transparent);
-  /* Status colours collapse into weight: solid = urgent, outline = attention, tint = fine, faint = inactive. */
+  --accent-soft: var(--buttermilk);
+  --accent-ring: color-mix(in srgb, var(--midnight) 28%, transparent);
+  /* Status is shown by weight: solid = urgent, outline = attention, Buttermilk tint = fine, faint = inactive. */
   --green: var(--midnight);
-  --green-soft: var(--accent-soft);
+  --green-soft: var(--buttermilk);
   --green-mark: var(--midnight);
   --orange: var(--midnight);
-  --orange-soft: color-mix(in srgb, var(--midnight) 14%, var(--buttermilk));
-  --orange-mark: color-mix(in srgb, var(--midnight) 58%, var(--buttermilk));
+  --orange-soft: var(--buttermilk);
+  --orange-mark: color-mix(in srgb, var(--midnight) 58%, var(--white));
   --red: var(--midnight);
-  --red-soft: color-mix(in srgb, var(--midnight) 18%, var(--buttermilk));
+  --red-soft: color-mix(in srgb, var(--midnight) 14%, var(--white));
   --red-mark: var(--midnight);
   --blue: var(--midnight);
-  --blue-soft: var(--accent-soft);
-  --gray-soft: color-mix(in srgb, var(--midnight) 8%, var(--buttermilk));
+  --blue-soft: var(--buttermilk);
+  --gray-soft: color-mix(in srgb, var(--midnight) 7%, var(--white));
   --radius: 14px;
   --radius-sm: 9px;
   --shadow: 0 1px 2px rgba(15, 60, 101, 0.06), 0 1px 3px rgba(15, 60, 101, 0.05);
@@ -97,7 +98,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .main { flex: 1; margin-left: var(--sidebar-w); min-width: 0; display: flex; flex-direction: column; }
 .topbar {
   position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px;
-  height: 68px; padding: 0 32px; background: color-mix(in srgb, var(--buttermilk) 90%, transparent);
+  height: 68px; padding: 0 32px; background: color-mix(in srgb, var(--white) 92%, transparent);
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
 }
 .topbar .menu-btn, .topbar-logo { display: none; }
@@ -381,7 +382,7 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .seg-green { background: var(--green-mark); }
 .seg-orange { background: var(--orange-mark); }
 .seg-red { background: var(--red-mark); }
-.seg-gray { background: color-mix(in srgb, var(--midnight) 24%, var(--buttermilk)); }
+.seg-gray { background: color-mix(in srgb, var(--midnight) 24%, var(--white)); }
 .status-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .status-rows a { display: flex; align-items: center; gap: 10px; padding: 10px 4px; color: var(--text-2); border-bottom: 1px solid var(--border); }
 .status-rows li:last-child a { border-bottom: 0; }
@@ -392,7 +393,7 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .dot-green { background: var(--green-mark); }
 .dot-orange { background: var(--orange-mark); }
 .dot-red { background: var(--red-mark); }
-.dot-gray { background: color-mix(in srgb, var(--midnight) 24%, var(--buttermilk)); }
+.dot-gray { background: color-mix(in srgb, var(--midnight) 24%, var(--white)); }
 .activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .activity li { display: flex; align-items: center; gap: 12px; }
 .activity-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; }
@@ -449,7 +450,7 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .timeline strong { font-weight: 500; font-size: 13.5px; }
 .timeline .muted { font-size: 12.5px; }
 .timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--accent-soft); margin-top: 4px; flex-shrink: 0; box-sizing: content-box; }
-.timeline-dot-start { background: color-mix(in srgb, var(--midnight) 24%, var(--buttermilk)); border-color: var(--gray-soft); }
+.timeline-dot-start { background: color-mix(in srgb, var(--midnight) 24%, var(--white)); border-color: var(--gray-soft); }
 .profile-card { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .detail-list { margin: 0; display: flex; flex-direction: column; }
 .detail-list div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -525,11 +526,11 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .empty-icon-red { background: var(--midnight); color: var(--buttermilk); }
 .dot-count { background: var(--midnight); color: var(--buttermilk); border-color: var(--buttermilk); }
 .btn-danger:hover, .btn-primary:hover { background: color-mix(in srgb, var(--midnight) 86%, var(--buttermilk)); border-color: transparent; }
-.renewal-active .renewal-rail { background: color-mix(in srgb, var(--midnight) 28%, var(--buttermilk)); }
-.renewal-expiring_soon .renewal-rail { background: color-mix(in srgb, var(--midnight) 62%, var(--buttermilk)); }
+.renewal-active .renewal-rail { background: color-mix(in srgb, var(--midnight) 26%, var(--white)); }
+.renewal-expiring_soon .renewal-rail { background: color-mix(in srgb, var(--midnight) 60%, var(--white)); }
 .renewal-expired .renewal-rail { background: var(--midnight); width: 5px; }
-.seg-orange, .dot-orange { background: color-mix(in srgb, var(--midnight) 58%, var(--buttermilk)); }
-.seg-red, .dot-red { background: repeating-linear-gradient(45deg, var(--midnight) 0 2px, var(--buttermilk) 2px 4px); outline: 1px solid var(--midnight); outline-offset: -1px; }
+.seg-orange, .dot-orange { background: color-mix(in srgb, var(--midnight) 58%, var(--white)); }
+.seg-red, .dot-red { background: repeating-linear-gradient(45deg, var(--midnight) 0 2px, var(--white) 2px 4px); outline: 1px solid var(--midnight); outline-offset: -1px; }
 .dot-red { width: 11px; height: 11px; }
 .stat-value .currency { color: var(--muted); }
 
@@ -550,6 +551,16 @@ a.cell-main:hover strong { color: var(--accent-strong); }
 .sidebar-user strong { color: var(--buttermilk); }
 .sidebar-user span { color: color-mix(in srgb, var(--buttermilk) 66%, var(--midnight)); }
 .sidebar .avatar { background: var(--buttermilk); color: var(--midnight); }
+
+/* ------------------------------------------------------------------ Buttermilk highlights on a white page */
+.tabs, .segmented { background: var(--surface-2); }
+.tab-active, .segment-active { background: var(--buttermilk); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--midnight) 18%, var(--buttermilk)); }
+.table th { background: var(--surface-2); }
+.card { box-shadow: 0 1px 2px rgba(15, 60, 101, 0.05); }
+.icon-btn:hover { background: var(--buttermilk); }
+.btn:hover { background: var(--buttermilk); border-color: var(--midnight); }
+.btn-primary:hover { background: color-mix(in srgb, var(--midnight) 86%, var(--white)); border-color: transparent; }
+.demo-account:hover { background: var(--buttermilk); }
 
 /* ------------------------------------------------------------------ responsive */
 @media (max-width: 1180px) {

@@ -25,5 +25,5 @@ variable "seed_demo_data" {
 variable "http_port" {
   description = "Host port that serves the web app."
   type        = number
-  default     = 8080
+  default     = 8090
 }

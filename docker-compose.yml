@@ -8,7 +8,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       DATABASE_URL: sqlite:////data/subsmate.db
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8090}
     volumes:
       - subsmate-data:/data          # SQLite database persists across restarts
     ports:
@@ -22,7 +22,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "8090:80"
     restart: unless-stopped
 
   prometheus:

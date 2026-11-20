@@ -15,7 +15,7 @@ cp .env.example .env            # set SECRET_KEY
 docker compose up --build
 ```
 
-Open **http://localhost:8080**. The SQLite database lives in the `subsmate-data` volume, so data survives restarts.
+Open **http://localhost:8090**. The SQLite database lives in the `subsmate-data` volume, so data survives restarts.
 
 To add monitoring, run `docker compose --profile monitoring up --build`. Prometheus is then at http://localhost:9090 and Grafana at http://localhost:3000 (`admin` / `admin`). Grafana loads the "Subsmate Overview" dashboard automatically.
 

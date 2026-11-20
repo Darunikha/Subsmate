@@ -69,7 +69,7 @@
         content: |
           SECRET_KEY={{ subsmate_secret_key }}
           SEED_DEMO_DATA={{ seed_demo_data | string | lower }}
-          CORS_ORIGINS=http://{{ ansible_host }}:8080
+          CORS_ORIGINS=http://{{ ansible_host }}:8090
 
     - name: Build and start containers
       ansible.builtin.command:
@@ -80,7 +80,7 @@
 
     - name: Wait for the API to become healthy
       ansible.builtin.uri:
-        url: http://localhost:8080/api/health
+        url: http://localhost:8090/api/health
         status_code: 200
       register: health
       retries: 20

@@ -22,6 +22,20 @@ export const PERMISSIONS = {
   manageUsers: ['admin'],
 };
 
+/** The permission needed to open each section of the app (anything not listed is open to all roles). */
+const PATH_PERMISSIONS = {
+  '/customers': 'viewCustomers',
+  '/payments': 'viewPayments',
+  '/reports': 'viewReports',
+};
+
+/** True if a user with this role may open `path`. Used to avoid redirecting people to dead ends. */
+export function roleCanOpenPath(role, path) {
+  const pathname = String(path || '/').split('?')[0];
+  const section = Object.keys(PATH_PERMISSIONS).find((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return !section || Boolean(PERMISSIONS[PATH_PERMISSIONS[section]]?.includes(role));
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(Boolean(getToken()));

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { roleCanOpenPath, useAuth } from '../lib/auth';
 import { Button, Field } from '../components/ui';
 import Icon from '../components/Icon';
 
@@ -26,8 +26,10 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      await login(email, password);
-      navigate(location.state?.from || '/', { replace: true });
+      const signedIn = await login(email, password);
+      // Return to the page they were on, unless this account can't open it (e.g. switching from admin to staff).
+      const from = location.state?.from || '/';
+      navigate(roleCanOpenPath(signedIn.role, from) ? from : '/', { replace: true });
     } catch (err) {
       setError(err.message);
       setBusy(false);

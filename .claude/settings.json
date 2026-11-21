@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python create_final_report.py)",
+      "Bash(npm list *)",
+      "Bash(timeout 180 node screenshot.js)"
+    ]
+  }
+}

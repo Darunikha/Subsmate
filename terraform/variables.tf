@@ -1,7 +1,7 @@
 variable "docker_host" {
   description = "Docker daemon to provision against (local socket, npipe on Windows, or ssh://user@host)."
   type        = string
-  default     = "unix:///var/run/docker.sock"
+ default = "unix:///var/run/docker.sock"
 }
 
 variable "image_tag" {

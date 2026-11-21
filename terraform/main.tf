@@ -30,9 +30,18 @@ resource "docker_image" "frontend" {
   }
 }
 
+resource "docker_network" "subsmate" {
+  name = "subsmate-net"
+}
+
 resource "docker_container" "backend" {
   name  = "subsmate-backend"
   image = docker_image.backend.image_id
+
+  networks_advanced {
+    name    = docker_network.subsmate.name
+    aliases = ["backend"]
+  }
 
   env = [
     "SECRET_KEY=${var.secret_key}",
@@ -56,6 +65,10 @@ resource "docker_container" "backend" {
 resource "docker_container" "frontend" {
   name  = "subsmate-frontend"
   image = docker_image.frontend.image_id
+
+  networks_advanced {
+    name = docker_network.subsmate.name
+  }
 
   ports {
     internal = 80
